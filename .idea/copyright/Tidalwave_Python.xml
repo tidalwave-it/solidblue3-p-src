@@ -1,0 +1,7 @@
+<component name="CopyrightManager">
+  <copyright>
+    <option name="allowReplaceRegexp" value="Copyright" />
+    <option name="notice" value="SolidBlue III - Open source data manager.&#10;&#10;__author__ = &quot;Fabrizio Giudici&quot;&#10;__copyright__ = &quot;Copyright © &amp;#36;today.year by Fabrizio Giudici&quot;&#10;__credits__ = [&quot;Fabrizio Giudici&quot;]&#10;__license__ = &quot;Apache v2&quot;&#10;__version__ = &quot;1.0-ALPHA-1&quot;&#10;__maintainer__ = &quot;Fabrizio Giudici&quot;&#10;__email__ = &quot;fabrizio.giudici@tidalwave.it&quot;&#10;__status__ = &quot;Prototype&quot;" />
+    <option name="myName" value="Tidalwave Python" />
+  </copyright>
+</component>

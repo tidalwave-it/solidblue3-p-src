@@ -1,0 +1,54 @@
+/BROKEN
+/Volumes/Users/BROKEN
+$Recycle.Bin
+.AppleDB
+.AppleDouble
+.DocumentRevisions-V100*
+.HFS+ Private Directory Data*
+.Spotlight-V100
+.Trash
+.Trashes
+.VolumeIcon.icns
+.webtmp
+/.MobileBackups
+/.MobileBackups.trash
+/.bzvol
+/.com.apple.NetBootX
+/.com.apple.timemachine.donotpresent
+/.fseventsd
+/.hotfiles.btree
+/.journal
+/.journal_info_block
+/.quota.group
+/.quota.user
+/.vol/*
+/Backups.backupdb
+/Library/Application Support/Comodo/AntiVirus/Quarantine
+/Library/Caches/CrashPlan
+/Network
+/PGPWDE01
+/PGPWDE02
+/System/Library/Caches/com.apple.bootstamps/*
+/System/Library/Caches/com.apple.corestorage/*
+/System/Library/Caches/com.apple.kext.caches/*
+/TheVolumeSettingsFolder
+/Volumes/*
+/automount
+/cores
+/dev/*
+/lost+found
+/net
+/private/tmp/
+/private/var/db/ConfigurationProfiles/Store
+/private/var/db/dyld/dyld_*
+/private/var/db/systemstats
+/private/var/folders
+/private/var/spool/qmaster
+/private/var/vm/*
+Library/Mobile Documents.*
+Library/Preferences/ByHost/com.apple.loginwindow*
+Library/Saved Application State
+Library/Caches/JetBrains
+Network Trash Folder
+*.lrdata
+Library/Application Support/us.electronic.macdroid/.uploads.aft/
