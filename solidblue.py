@@ -26,44 +26,10 @@ from PySide2.QtWidgets import *
 
 import utilities
 from config import Config
+from executor import Worker, Executor
 from fingerprinting import FingerprintingControl, FingerprintingPresentation
 from rsync import RSync, RSyncPresentation
 from utilities import *
-
-
-class WorkerSignals(QObject):
-    finished = Signal()
-    error = Signal(tuple)
-
-
-#
-#
-#
-class Worker(QRunnable):
-    #
-    # Constructor.
-    #
-    def __init__(self, task, log_exception, *args, **kwargs):
-        super(Worker, self).__init__()
-        self.task = task
-        self.log_exception = log_exception
-        self.args = args
-        self.kwargs = kwargs
-        self.signals = WorkerSignals()
-
-    #
-    #
-    #
-    @Slot()
-    def run(self):
-        try:
-            result = self.task(*self.args, **self.kwargs)
-        except BaseException as e:
-            self.log_exception('In worker', e)
-            exctype, value = sys.exc_info()[:2]
-            self.signals.error.emit(exctype, value, traceback.format_exc())
-        finally:
-            self.signals.finished.emit()
 
 
 #
@@ -244,14 +210,12 @@ class Widgets(QObject):
 
     dialog_closed = threading.Event()
 
-    thread_pool = QThreadPool()
-
     script_path = Path(os.path.realpath(__file__)).parent
 
     #
     # Constructor.
     #
-    def __init__(self, main_window: QMainWindow, log, log_exception):
+    def __init__(self, main_window: QMainWindow, executor: Executor, log, log_exception):
         QObject.__init__(self)
 
         def create_console() -> QTextEdit:
@@ -270,6 +234,7 @@ class Widgets(QObject):
             return pb_progress
 
         self.main_window = main_window
+        self.executor = executor
         self.tb_toolbar = QToolBar()
         self.layout = QVBoxLayout()
 
@@ -415,7 +380,7 @@ class Widgets(QObject):
             worker.signals.error.connect(error)
             self.__slot_clear_console()
             self.__slot_reset_progress()
-            self.thread_pool.start(worker)
+            self.executor.submit(worker)
 
         action.triggered.connect(start)
 
@@ -573,7 +538,8 @@ class MainWindow(QWidget):
 
         self.macos_excludes = Config.resource('macos-excludes.txt')
 
-        self.widgets = Widgets(self, self.log, self.log_exception)
+        self.executor = Executor(self.log, self.log_exception)
+        self.widgets = Widgets(self, self.executor, self.log, self.log_exception)
 
         for sc in Config.scan_config().values():
             self.widgets.add_button(self, sc.icon, f'Scan {sc.label}', self.__scan_files, sc)
@@ -830,39 +796,15 @@ class MainWindow(QWidget):
     # Execs a process and returns the exit code. Output is written to log file and to the console.
     #
     def __execute(self, args, output_processor=None, fail_on_result_code: bool = False, log_cmdline: bool = True):
+        if output_processor is None:
+            output_processor = self.__default_post_processor
+
         if log_cmdline:
             self.widgets.log_to_console(' '.join(args))
         else:
             self.log(' '.join(args))
 
-        if output_processor is None:
-            output_processor = self.__default_post_processor
-
-        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='latin-1')
-
-        while True:
-            try:
-                line = process.stdout.readline()
-
-                if line == '' and process.poll() is not None:
-                    break
-
-                output_processor(line[0:-1])
-            except UnicodeDecodeError as e:
-                self.log_exception('>>>> Error in decoding subprocess output', e)
-                line = html_red('ERROR in decoding subprocess output')
-                self.widgets.log_to_console(line)
-            except BaseException as e:
-                self.log_exception('>>>> Error in processing subprocess output', e)
-                line = html_red('ERROR in processing subprocess output')
-                self.widgets.log_to_console(line)
-
-        self.log('>>>> subprocess terminated')
-
-        if fail_on_result_code and process.returncode != 0:
-            raise RuntimeError(f'Error: process return code is {process.returncode}')
-
-        return process.returncode
+        return self.executor.execute(args, output_processor=output_processor, fail_on_result_code=fail_on_result_code)
 
     #
     # A string post-processor which just logs to the console.
