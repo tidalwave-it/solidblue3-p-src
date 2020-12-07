@@ -615,15 +615,12 @@ class MainWindow(QWidget):
     #
     def __scan_files(self, config: Config.Scan):
         self.log(f'__scan_files({config})')
-        folder = config.path
-        file_filter = config.filter
-        label = config.label
         options = self.widgets.ask_only_new_files()
 
         if options:
-            self.__start_notification(f'Scanning {label}...')
-            self.fingerprinting_control.scan(folder, file_filter, options.only_new_files)
-            self.__completion_notification(f'{label} scanned.')
+            self.__start_notification(f'Scanning {config.label}...')
+            self.fingerprinting_control.scan(config.path, config.filter, options.only_new_files)
+            self.__completion_notification(f'{config.label} scanned.')
 
     #
     # Registers a backup in an external volume.
