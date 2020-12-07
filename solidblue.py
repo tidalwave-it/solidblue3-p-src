@@ -317,7 +317,7 @@ class Widgets(QObject):
         def arg_helper():
             function(arg)
 
-        action = QAction(QIcon(f'{self.script_path}/icons/{icon_name}.png'), text, parent)
+        action = QAction(QIcon(Config.resource(f'icons/{icon_name}.png')), text, parent)
 
         if arg:
             self.__connect_action(action, arg_helper)
@@ -563,15 +563,14 @@ class MainWindow(QWidget):
         QWidget.__init__(self)
 
         self.home = Config.home_folder()
-        self.script_path = Path(os.path.realpath(__file__)).parent
         self.app_folder_path = Config.app_folder_path()
         log_folder = f'{self.app_folder_path}/log'
         log_path = f'{log_folder}/SolidBlue.log'
         os.makedirs(log_folder, exist_ok=True)
         self.log_file = open(log_path, 'wt')
-        self.log(f'Home directory: {self.home} - Script directory: {self.script_path}')
+        self.log(f'Home directory: {self.home} - Script directory: {Config.resource("")}')
 
-        self.macos_excludes = f'{self.script_path}/macos-excludes.txt'
+        self.macos_excludes = Config.resource('macos-excludes.txt')
 
         self.widgets = Widgets(log=self.log, log_exception=self.log_exception)
 
@@ -606,6 +605,7 @@ class MainWindow(QWidget):
         flags = ['--delete', '--delete-excluded', '--delete-before', '--progress', '--stats', '-rtvv', '--ignore-errors']
         flags += config.extra_rsync_flags
         flags += [f'--exclude-from={self.macos_excludes}']
+        rsync = Config.resource('rsync3')
 
         for item_name, item in config.items.items():
             self.widgets.log_bold_to_console(f'Syncing {item_name}...')
@@ -614,7 +614,7 @@ class MainWindow(QWidget):
                 self.widgets.log_red_to_console(f'Source not mounted: {item.source}')
             else:
                 target = f'{config.server}:{item.target}/' if config.server else f'{item.target}/'
-                self.__execute(['rsync3'] + flags + item.extra_rsync_flags + [f'{item.source}/', target], self.rsync.ccc_post_processor)
+                self.__execute([rsync] + flags + item.extra_rsync_flags + [f'{item.source}/', target], self.rsync.ccc_post_processor)
 
         self.__completion_notification(f'Files pushed to {config.server}.')
 

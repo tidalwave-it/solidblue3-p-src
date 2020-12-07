@@ -14,11 +14,14 @@
 
 import os
 from collections import namedtuple
+from pathlib import Path
 
 import yaml
 
 
 class Config:
+    script_path = Path(os.path.realpath(__file__)).parent
+
     @staticmethod
     def home_folder() -> str:
         return os.getenv("HOME")
@@ -26,6 +29,10 @@ class Config:
     @staticmethod
     def app_folder_path() -> str:
         return f'{Config.home_folder()}/Library/Application Support/SolidBlue'
+
+    @staticmethod
+    def resource(resource: str) -> str:
+        return f'{Config.script_path}/resources/{resource}'
 
     @staticmethod
     def config() -> dict:
