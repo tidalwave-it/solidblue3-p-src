@@ -547,10 +547,10 @@ class MainWindow(QWidget):
             self.widgets.add_button(self, sc.icon, f'Scan {sc.label}', self.__scan_files, sc)
 
         self.widgets.add_separator()
-        self.widgets.add_button(self, 'create-backup', 'Create backup', self.create_encrypted_backup)
+        self.widgets.add_button(self, 'create-backup', 'Create backup', self.__create_encrypted_backup)
         self.widgets.add_button(self, 'register-backup', 'Register backup', self.__register_backup)
-        self.widgets.add_button(self, 'check-backup', 'Check backup', self.check_backup)
-        self.widgets.add_button(self, 'show-backups', 'Show backups', self.show_backups)
+        self.widgets.add_button(self, 'check-backup', 'Check backup', self.__check_backup)
+        self.widgets.add_button(self, 'show-backups', 'Show backups', self.__show_backups)
         self.widgets.add_separator()
 
         for pmf in Config.push_files_config().values():
@@ -636,7 +636,7 @@ class MainWindow(QWidget):
     #
     # Checks a backup in an external volume.
     #
-    def check_backup(self):
+    def __check_backup(self):
         options = self.widgets.pick_registered_backup(self.fingerprinting_control.mounted_backup_volumes(registered=True))
 
         if options:
@@ -647,7 +647,7 @@ class MainWindow(QWidget):
     #
     # Prints the backup registry.
     #
-    def show_backups(self):
+    def __show_backups(self):
         def fmt(date):
             return date.strftime("%Y-%m-%d %H:%M") if date else None
 
@@ -665,7 +665,7 @@ class MainWindow(QWidget):
     #
     #
     #
-    def create_encrypted_backup(self):
+    def __create_encrypted_backup(self):
         options = self.widgets.ask_backup_options()
 
         if options:
