@@ -102,6 +102,14 @@ def enumerate_files(folders: [str], file_filter: str = '.*') -> [FileInfo]:
 #
 #
 #
+def file_enumeration_message(files: [str]) -> str:
+    total_size = sum(file.size for file in files)
+    return f'Found {len(files)} files ({format_bytes(int(round(total_size)))})'
+
+
+#
+#
+#
 def eject_optical_disc(base_path: str):
     os.system("drutil tray eject")
 

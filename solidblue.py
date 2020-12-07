@@ -695,9 +695,9 @@ class MainWindow(QWidget):
         try:
             self.widgets.log_to_console('Scanning files...')
             files_to_backup = enumerate_files(folders)
+            self.widgets.log_to_console(file_enumeration_message(files_to_backup))
             total_size = sum(file.size for file in files_to_backup)
             size = int(round((total_size + len(files_to_backup) * 10 * 1024) * 1.02))
-            self.widgets.log_to_console(f'Found {len(files_to_backup)} files ({utilities.format_bytes(total_size)})')
 
             # TODO: check size
 
