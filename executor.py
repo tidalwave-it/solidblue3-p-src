@@ -85,11 +85,11 @@ class Executor:
             except UnicodeDecodeError as e:
                 self.log_exception('>>>> Error in decoding subprocess output', e)
                 line = html_red('ERROR in decoding subprocess output')
-                self.widgets.log_to_console(line)
+                # FIXME: self.widgets.log_to_console(line)
             except BaseException as e:
                 self.log_exception('>>>> Error in processing subprocess output', e)
                 line = html_red('ERROR in processing subprocess output')
-                self.widgets.log_to_console(line)
+                # FIXME: self.widgets.log_to_console(line)
 
         self.log('>>>> subprocess terminated')
 
