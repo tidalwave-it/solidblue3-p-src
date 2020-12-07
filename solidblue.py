@@ -568,7 +568,7 @@ class MainWindow(QWidget):
                                                             debug_function=self.debug)
 
     #
-    # Pushes media.
+    # Pushes files to a target.
     #
     def __push_files(self, config: Config.PushFiles):
         self.__start_notification(f'Pushing files to {config.server}...')
@@ -630,11 +630,8 @@ class MainWindow(QWidget):
 
         if options:
             self.__start_notification(f'Registering backup {options.base_path} ({options.label})...')
-            self.fingerprinting_control.register_backup(options.label, options.base_path)
+            self.fingerprinting_control.register_backup(options.label, options.base_path, eject_after=options.eject_after_scan)
             self.__completion_notification(f'Backup {options.base_path} registered.')
-
-            if options.eject_after_scan:
-                utilities.eject_optical_disc(options.base_path)
 
     #
     # Checks a backup in an external volume.
@@ -644,11 +641,8 @@ class MainWindow(QWidget):
 
         if options:
             self.__start_notification(f'Checking backup {options.base_path}...')
-            self.fingerprinting_control.check_backup(options.base_path)
+            self.fingerprinting_control.check_backup(options.base_path, eject_after=options.eject_after_scan)
             self.__completion_notification(f'Backup {options.base_path} checked.')
-
-            if options.eject_after_scan:
-                utilities.eject_optical_disc(options.base_path)
 
     #
     # Prints the backup registry.

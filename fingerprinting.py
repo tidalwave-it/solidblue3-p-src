@@ -526,7 +526,7 @@ class FingerprintingControl:
     #
     # Registers a new backup.
     #
-    def register_backup(self, label: str, mount_point: str):
+    def register_backup(self, label: str, mount_point: str, eject_after: bool = False):
         veracrypt_backup, actual_mount_point = self.__check_veracrypt_backup(mount_point)
 
         try:
@@ -568,6 +568,9 @@ class FingerprintingControl:
                 self.presentation.notify_progress(count, len(backup_files))
 
             self.storage.commit()
+
+            if eject_after:
+                utilities.eject_optical_disc(mount_point)
         finally:
             self.storage.close()
             self.__eventually_unmount_veracrypt_backup(veracrypt_backup, actual_mount_point)
@@ -575,7 +578,7 @@ class FingerprintingControl:
     #
     # Checks an existing backup.
     #
-    def check_backup(self, mount_point: str):
+    def check_backup(self, mount_point: str, eject_after: bool = False):
         veracrypt_backup, actual_mount_point = self.__check_veracrypt_backup(mount_point)
         new_timestamp = self.time_provider()
 
@@ -620,6 +623,9 @@ class FingerprintingControl:
 
             self.storage.set_backup_check_latest_timestamp(backup.id, check_timestamp)
             self.storage.commit()
+
+            if eject_after:
+                utilities.eject_optical_disc(mount_point)
         finally:
             self.storage.close()
             self.__eventually_unmount_veracrypt_backup(veracrypt_backup, actual_mount_point)
@@ -729,7 +735,7 @@ class FingerprintingControl:
                     # TODO utilities.inject_optical_disc()
                     time.sleep(5)
 
-                self.register_backup(mount_point=optical_mount_point, label=backup_label)
+                self.register_backup(label=backup_label, mount_point=optical_mount_point)
                 self.check_backup(optical_mount_point)
                 self.__execute(['hdiutil', 'detach', optical_mount_point], fail_on_result_code=True)
                 utilities.eject_optical_disc(optical_mount_point)
