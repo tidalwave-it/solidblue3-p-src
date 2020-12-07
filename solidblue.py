@@ -856,6 +856,7 @@ class MainWindow(QWidget):
         self.log(message)
         traceback.print_exc(file=self.log_file)
         self.log_file.flush()
+        self.widgets.log_red_to_console(f'Error: {str(exception)}')
 
     #
     #
