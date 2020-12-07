@@ -693,10 +693,9 @@ class FingerprintingControl:
             veracrypt_mount_image(veracrypt_image_file, veracrypt_mount_point, key_file, self.log)
 
             self.presentation.notify_message('Copying files...')
-            sub_progress = 0
             self.presentation.notify_secondary_progress(0)
 
-            for file in files_to_backup:
+            for sub_progress, file in enumerate(files_to_backup, start=1):
                 parent = None
 
                 for folder in folders:
@@ -709,7 +708,6 @@ class FingerprintingControl:
                 os.makedirs(target_folder, exist_ok=True)
                 # Can't use shutils.copy*() because they don't preserve extended attributes
                 self.__execute(['cp', '-p', file.path, f'{target_folder}/{file.name}'], log_cmdline=False, fail_on_result_code=True)
-                sub_progress += 1
                 self.presentation.notify_secondary_progress(sub_progress / len(files_to_backup))
                 self.presentation.notify_file(file.name, is_new=False)
 
