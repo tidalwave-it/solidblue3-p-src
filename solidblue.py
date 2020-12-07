@@ -72,8 +72,8 @@ class Worker(QRunnable):
 class OnlyNewFilesDialog(QDialog):
     Options = namedtuple('Settings', 'only_new_files')
 
-    def __init__(self):
-        QDialog.__init__(self)
+    def __init__(self, main_window: QMainWindow):
+        QDialog.__init__(self, main_window)
         self.cb_only_new_files = QCheckBox(self)
         self.cb_only_new_files.setText('Only scan new files')
         self.cb_only_new_files.setChecked(True)
@@ -97,8 +97,8 @@ class OnlyNewFilesDialog(QDialog):
 class CreateBackupDialog(QDialog):
     Options = namedtuple('Options', 'label folders algorithm hash_algorithm burn')
 
-    def __init__(self):
-        QDialog.__init__(self)
+    def __init__(self, main_window: QMainWindow):
+        QDialog.__init__(self, main_window)
         self.le_label = QLineEdit()
         self.le_label.setText('FG-2019-0001,0002 #1')
         self.cb_do_not_burn = QCheckBox()
@@ -147,8 +147,8 @@ class UnregisteredBackupDialog(QDialog):
     Options = namedtuple('Options', 'base_path, label, eject_after_scan')
     signal_populate = Signal(object)
 
-    def __init__(self):
-        QDialog.__init__(self)
+    def __init__(self, main_window: QMainWindow):
+        QDialog.__init__(self, main_window)
         self.cb_volume_mount_point = QComboBox()
         self.cb_volume_mount_point.setEditable(False)
         self.le_backup_name = QLineEdit()
@@ -196,8 +196,8 @@ class RegisteredBackupDialog(QDialog):
     Options = namedtuple('Options', 'base_path, label, eject_after_scan')
     signal_populate = Signal(object)
 
-    def __init__(self):
-        QDialog.__init__(self)
+    def __init__(self, main_window: QMainWindow):
+        QDialog.__init__(self, main_window)
         self.cb_volume_mount_point = QComboBox()
         self.cb_volume_mount_point.setEditable(False)
         self.cb_eject_after_scan = QCheckBox()
@@ -251,7 +251,7 @@ class Widgets(QObject):
     #
     # Constructor.
     #
-    def __init__(self, log, log_exception):
+    def __init__(self, main_window: QMainWindow, log, log_exception):
         QObject.__init__(self)
 
         def create_console() -> QTextEdit:
@@ -269,6 +269,7 @@ class Widgets(QObject):
             # pb_progress.setFormat('%v/%m - %__slot_p')
             return pb_progress
 
+        self.main_window = main_window
         self.tb_toolbar = QToolBar()
         self.layout = QVBoxLayout()
 
@@ -305,10 +306,10 @@ class Widgets(QObject):
         self.signal_progress_reset.connect(self.__slot_reset_progress)
         self.signal_show_dialog.connect(self.__slot_show_modal_dialog)
 
-        self.d_create_backup_options = CreateBackupDialog()
-        self.d_only_new_files = OnlyNewFilesDialog()
-        self.d_ask_unregistered_backup = UnregisteredBackupDialog()
-        self.d_ask_registered_backup = RegisteredBackupDialog()
+        self.d_create_backup_options = CreateBackupDialog(self.main_window)
+        self.d_only_new_files = OnlyNewFilesDialog(self.main_window)
+        self.d_ask_unregistered_backup = UnregisteredBackupDialog(self.main_window)
+        self.d_ask_registered_backup = RegisteredBackupDialog(self.main_window)
 
     #
     # Add a button in the toolbar.
@@ -572,7 +573,7 @@ class MainWindow(QWidget):
 
         self.macos_excludes = Config.resource('macos-excludes.txt')
 
-        self.widgets = Widgets(log=self.log, log_exception=self.log_exception)
+        self.widgets = Widgets(self, self.log, self.log_exception)
 
         for sc in Config.scan_config().values():
             self.widgets.add_button(self, sc.icon, f'Scan {sc.label}', self.__scan_files, sc)
