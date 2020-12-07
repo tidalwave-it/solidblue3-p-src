@@ -61,7 +61,7 @@ class Worker(QRunnable):
         except BaseException as e:
             self.log_exception('In worker', e)
             exctype, value = sys.exc_info()[:2]
-            self.signals.error.emit((exctype, value, traceback.format_exc()))
+            self.signals.error.emit(exctype, value, traceback.format_exc())
         finally:
             self.signals.finished.emit()
 
