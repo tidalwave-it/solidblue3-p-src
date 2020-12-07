@@ -548,7 +548,7 @@ class MainWindow(QWidget):
 
         self.widgets.add_separator()
         self.widgets.add_button(self, 'create-backup', 'Create backup', self.create_encrypted_backup)
-        self.widgets.add_button(self, 'register-backup', 'Register backup', self.register_backup)
+        self.widgets.add_button(self, 'register-backup', 'Register backup', self.__register_backup)
         self.widgets.add_button(self, 'check-backup', 'Check backup', self.check_backup)
         self.widgets.add_button(self, 'show-backups', 'Show backups', self.show_backups)
         self.widgets.add_separator()
@@ -557,7 +557,7 @@ class MainWindow(QWidget):
             self.widgets.add_button(self, pmf.icon, pmf.label, self.__push_files, pmf)
 
         self.widgets.add_separator()
-        self.widgets.add_button(self, 'check-all-volumes', 'Check volumes', self.check_all_volumes)
+        self.widgets.add_button(self, 'check-all-volumes', 'Check volumes', self.__check_all_volumes)
         self.setLayout(self.widgets.layout)
 
         self.rsync = RSync(presentation=RsyncPresentationAdapter(self.widgets), log=self.log)
@@ -592,7 +592,7 @@ class MainWindow(QWidget):
     #
     # Checks all mounted volumes.
     #
-    def check_all_volumes(self):
+    def __check_all_volumes(self):
         volumes = sorted(os.listdir('/Volumes'))
         self.__start_notification(f'Checking volumes: {", ".join(volumes)}')
         step_count = len(volumes)
@@ -628,7 +628,7 @@ class MainWindow(QWidget):
     #
     # Registers a backup in an external volume.
     #
-    def register_backup(self):
+    def __register_backup(self):
         options = self.widgets.pick_unregistered_backup(self.fingerprinting_control.mounted_backup_volumes(registered=False))
 
         if options:
