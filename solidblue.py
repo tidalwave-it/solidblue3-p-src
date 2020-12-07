@@ -604,7 +604,7 @@ class MainWindow(QWidget):
         self.__start_notification(f'Pushing files to {config.server}...')
         # --ignore-errors is needed to ensure deletions complete also in case of error.
         flags = ['--delete', '--delete-excluded', '--delete-before', '--progress', '--stats', '-rtvv', '--ignore-errors']
-        flags += self.__string_to_list(config.extra_rsync_flags)
+        flags += config.extra_rsync_flags
         flags += [f'--exclude-from={self.macos_excludes}']
 
         for item_name, item in config.items.items():
@@ -613,24 +613,10 @@ class MainWindow(QWidget):
             if not os.path.exists(item.source):
                 self.widgets.log_red_to_console(f'Source not mounted: {item.source}')
             else:
-                flags2 = flags + self.__string_to_list(item.extra_rsync_flags)
                 target = f'{config.server}:{item.target}/' if config.server else f'{item.target}/'
-                self.__execute(['rsync3'] + flags2 + [f'{item.source}/', target], self.rsync.ccc_post_processor)
+                self.__execute(['rsync3'] + flags + item.extra_rsync_flags + [f'{item.source}/', target], self.rsync.ccc_post_processor)
 
         self.__completion_notification(f'Files pushed to {config.server}.')
-
-    #
-    #
-    #
-    def __string_to_list(self, flags: str) -> [str]:
-        r = []
-
-        if flags != '':
-            for i in flags.split(' '):
-                r += [i]
-
-        self.log(f'FLAGS *{flags} -> *{r}')
-        return r
 
     #
     # Checks all mounted volumes.

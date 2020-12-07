@@ -79,7 +79,10 @@ class Config:
 
             for field in fields:
                 if field not in field_dict:
-                    field_dict[field] = ''
+                    if field == 'extra_rsync_flags':
+                        field_dict[field] = []
+                    else:
+                        field_dict[field] = ''
 
             return field_dict
 
