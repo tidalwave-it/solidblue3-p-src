@@ -486,7 +486,8 @@ class FingerprintingPresentationAdapter(FingerprintingPresentation, AdapterSuppo
         self.widgets.log_to_console('Counting files...')
 
     def notify_file_count(self, file_count: int):
-        self.widgets.log_to_console(f'{file_count} files to scan')
+        # self.widgets.log_to_console(f'{file_count} files to scan')
+        pass
 
     def notify_file(self, path: str, is_new: bool):
         path = self.__simplified(path)

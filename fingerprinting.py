@@ -26,6 +26,7 @@ from pathlib import Path
 import mmap
 import xattr
 
+import utilities
 from config import Config
 from utilities import format_bytes, generate_id, extract, enumerate_files, veracrypt_mount_image, veracrypt_unmount_image
 
@@ -567,41 +568,7 @@ class FingerprintingControl:
     #
     def check_backup(self, mount_point: str):
         veracrypt_backup, actual_mount_point = self.__check_veracrypt_backup(mount_point)
-
-        file_count = 0
-        progress = 0
         new_timestamp = self.time_provider()
-
-        def count_files(sub_folder: str, file_name: str):
-            nonlocal file_count
-            file_count = file_count + 1
-            return file_count
-
-        def check_files(sub_folder: str, file_name: str):
-            nonlocal progress, backup, new_timestamp
-            file_path = f'{sub_folder}/{file_name}'
-            backup_file = file_path.replace(f'{actual_mount_point}/', '')
-            file_id = self.__find_file_id(file_path)
-
-            if file_id:
-                original_fingerprint, _ = self.storage.find_latest_fingerprint_by_id(file_id)
-                algorithm, fingerprint = self.storage.compute_fingerprint(file_path)
-                self.presentation.notify_file(file_path, is_new=False)
-                backup_item_id = self.storage.find_backup_item_id(backup.id, file_id)
-
-                if not backup_item_id:
-                    self.presentation.notify_error(f'File was not registered as part of the backup: {backup_file} - registering now')
-                    backup_item_id = self.storage.add_backup_item(backup.id, file_id, backup_file)
-
-                self.storage.add_fingerprint(backup_item_id, file_name, algorithm, fingerprint, new_timestamp)
-
-                if algorithm == 'error':
-                    self.presentation.notify_error(f'{file_name}: {algorithm}')
-                elif original_fingerprint != fingerprint:
-                    self.presentation.notify_error(f'Mismatch for {file_path}: found {original_fingerprint} expected {fingerprint}')
-
-            progress = progress + 1
-            self.presentation.notify_progress(progress, file_count)
 
         try:
             self.storage.open()
@@ -613,13 +580,35 @@ class FingerprintingControl:
                 self.presentation.notify_error(f'{backup.base_path} is not a registered backup')
                 return
 
-            # TODO check that base_path and label match
-
             check_timestamp = self.time_provider()
             self.presentation.notify_message('Counting files...')
-            file_count = self.storage.walk(actual_mount_point, '.*', count_files)
-            self.presentation.notify_file_count(file_count)
-            self.storage.walk(actual_mount_point, '.*', check_files)
+            backup_files = enumerate_files([actual_mount_point])
+            self.presentation.notify_file_count(len(backup_files))
+            self.presentation.notify_message(utilities.file_enumeration_message(backup_files))
+
+            for progress, backup_file in enumerate(backup_files, start=1):
+                file_relative_path = backup_file.path.replace(f'{actual_mount_point}/', '')
+                file_id = self.__find_file_id(backup_file.path)
+
+                if file_id:
+                    self.presentation.notify_file(backup_file.path, is_new=False)
+                    original_fingerprint, _ = self.storage.find_latest_fingerprint_by_id(file_id)
+                    algorithm, fingerprint = self.storage.compute_fingerprint(backup_file.path)
+                    backup_item_id = self.storage.find_backup_item_id(backup.id, file_id)
+
+                    if not backup_item_id:
+                        self.presentation.notify_error(f'File was not registered as part of the backup: {file_relative_path} - registering now')
+                        backup_item_id = self.storage.add_backup_item(backup.id, file_id, file_relative_path)
+
+                    self.storage.add_fingerprint(backup_item_id, backup_file.name, algorithm, fingerprint, new_timestamp)
+
+                    if algorithm == 'error':
+                        self.presentation.notify_error(f'{backup_file.name}: {algorithm}')
+                    elif original_fingerprint != fingerprint:
+                        self.presentation.notify_error(f'Mismatch for {backup_file.path}: found {original_fingerprint} expected {fingerprint}')
+
+                self.presentation.notify_progress(progress, len(backup_files))
+
             self.storage.set_backup_check_latest_timestamp(backup.id, check_timestamp)
             self.storage.commit()
         finally:
