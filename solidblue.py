@@ -13,10 +13,8 @@
 #  __status__ = "Prototype"
 
 import datetime
-import shutil
 import sys
 import threading
-import time
 import traceback
 from pathlib import Path
 
@@ -517,6 +515,9 @@ class FingerprintingPresentationAdapter(FingerprintingPresentation, AdapterSuppo
         if total > 0:
             self.widgets.signal_progress.emit(float(1.0 * partial / total))
 
+    def notify_secondary_progress(self, progress: float):
+        self.widgets.signal_secondary_progress.emit(progress)
+
     def notify_message(self, message: str):
         self.widgets.log_to_console(message)
     # END TODO
@@ -561,7 +562,9 @@ class MainWindow(QWidget):
 
         self.rsync = RSync(presentation=RsyncPresentationAdapter(self.widgets), log=self.log)
         self.fingerprinting_control = FingerprintingControl(database_folder=Config.database_folder(),
+                                                            executor=self.executor,
                                                             presentation=FingerprintingPresentationAdapter(self.widgets),
+                                                            log=self.log,
                                                             debug_function=self.debug)
 
     #
@@ -674,124 +677,14 @@ class MainWindow(QWidget):
     def create_encrypted_backup(self):
         options = self.widgets.ask_backup_options()
 
-        if not options:
-            return
-
-        DVD_RAW_SIZE = 8543666176
-
-        self.__start_notification(f'Creating encrypted backup...')
-        burn = options.burn
-        backup_name = options.label
-        backup_label = backup_name
-        folders = options.folders
-
-        working_folder = Config.working_folder()
-        veracrypt_image_folder = f'{working_folder}/{backup_name}_contents'
-        veracrypt_image_file = f'{veracrypt_image_folder}/{backup_name}.veracrypt'
-        veracrypt_mount_point = f'/Volumes/{backup_name}'
-        opt_image_file = f'{working_folder}/{backup_name}'
-        opt_image_file_with_ext = f'{opt_image_file}.dmg'
-        key_file = Config.encrypted_backup_key_file()
-
-        try:
-            self.widgets.log_to_console('Scanning files...')
-            files_to_backup = enumerate_files(folders)
-            self.widgets.log_to_console(file_enumeration_message(files_to_backup))
-            total_size = sum(file.size for file in files_to_backup)
-            size = int(round((total_size + len(files_to_backup) * 10 * 1024) * 1.02))
-
-            # TODO: check size
-
-            self.widgets.log_to_console(f'Cleaning up working area ({working_folder})...')
-
-            if Path(working_folder).exists():
-                shutil.rmtree(working_folder)
-
-            os.makedirs(veracrypt_image_folder, exist_ok=True)
-
-            def veracrypt_post_processor(string: str):
-                self.log(string)
-                self.widgets.signal_status.emit(string)
-
-            self.__execute([VERACRYPT,
-                            '--text',
-                            '--non-interactive',
-                            '--create',
-                            veracrypt_image_file,
-                            '--volume-type=normal',
-                            f'--size={size}',
-                            f'--encryption={options.algorithm}',
-                            f'--hash={options.hash_algorithm}',
-                            '--filesystem=hfs',
-                            '--keyfiles',
-                            key_file,
-                            '--quick',
-                            '--random-source=/dev/urandom'],
-                           veracrypt_post_processor,
-                           fail_on_result_code=True)
-
-            veracrypt_image_size = os.stat(veracrypt_image_file).st_size
-            self.widgets.log_to_console(f'Veracrypt image size is {format_bytes(veracrypt_image_size)}')
-
-            self.widgets.log_to_console('Mounting encrypted image...')
-            veracrypt_mount_image(veracrypt_image_file, veracrypt_mount_point, key_file, self.log)
-
-            self.widgets.log_to_console('Copying files...')
-            sub_progress = 0
-            self.widgets.signal_secondary_progress.emit(0)
-
-            for file in files_to_backup:
-                parent = None
-
-                for folder in folders:
-                    if file.folder.startswith(folder):
-                        parent = Path(folder).name
-                        break
-
-                assert parent is not None
-                target_folder = f'{veracrypt_mount_point}/{parent}'
-                os.makedirs(target_folder, exist_ok=True)
-                # Can't use shutils.copy*() because they don't preserve extended attributes
-                self.__execute(['cp', '-p', file.path, f'{target_folder}/{file.name}'], log_cmdline=False, fail_on_result_code=True)
-                sub_progress += 1
-                self.widgets.signal_secondary_progress.emit(sub_progress / len(files_to_backup))
-                self.widgets.signal_status.emit(file.name)
-
-            self.widgets.log_to_console('Unmounting encrypted image...')
-            veracrypt_unmount_image(veracrypt_mount_point, self.log)
-
-            self.widgets.signal_status.emit('')
-            # -hfs because we don't know how to retrieve an unique id for -udf or -joliet.
-            self.__execute(['hdiutil', 'makehybrid', '-o', opt_image_file, veracrypt_image_folder,
-                            '-ov', '-hfs', '-default-volume-name', backup_label], fail_on_result_code=True)
-
-            opt_image_size = os.stat(opt_image_file_with_ext).st_size
-            self.widgets.log_to_console(f'Burn image size is {format_bytes(opt_image_size)}')
-
-            if burn:
-                optical_mount_point = f'/Volumes/{backup_name}'
-
-                # It seems it's impossible to prevent drutil from ejecting the media.
-                self.__execute(['drutil', 'burn', '-noverify', '-speed', '6', opt_image_file_with_ext], fail_on_result_code=True)
-
-                while not os.path.exists(optical_mount_point):
-                    self.widgets.log_to_console('Optical disk not mounted, please close the tray.')
-                    # utilities.inject_optical_disc()
-                    time.sleep(5)
-
-                self.fingerprinting_control.register_backup(mount_point=optical_mount_point, label=backup_label)
-                self.fingerprinting_control.check_backup(optical_mount_point)
-                self.__execute(['hdiutil', 'detach', optical_mount_point], fail_on_result_code=True)
-                utilities.eject_optical_disc(optical_mount_point)
-
+        if options:
+            self.__start_notification(f'Creating encrypted backup...')
+            self.fingerprinting_control.create_encrypted_backup(folders=options.folders,
+                                                                backup_name=options.label,
+                                                                algorithm=options.algorithm,
+                                                                hash_algorithm=options.hash_algorithm,
+                                                                burn=options.burn)
             self.__completion_notification('Encrypted backup created.')
-        except BaseException as e:
-            self.widgets.log_red_to_console(f'ERROR: Procedure failed: {e}')
-        finally:
-            if burn:
-                self.widgets.log_to_console(f'Cleaning up working area ({working_folder})...')
-                shutil.rmtree(working_folder)
-        # FIXME: what if the verification fails? The backup should be removed.
 
     #
     # Execs a process and returns the exit code. Output is written to log file and to the console.

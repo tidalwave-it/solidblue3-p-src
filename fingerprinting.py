@@ -16,6 +16,7 @@ import datetime
 import hashlib
 import os
 import re
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -28,6 +29,7 @@ import xattr
 
 import utilities
 from config import Config
+from executor import Executor
 from utilities import format_bytes, generate_id, extract, enumerate_files, veracrypt_mount_image, veracrypt_unmount_image
 
 XATTR_ID = 'it.tidalwave.datamanager.id'
@@ -421,6 +423,9 @@ class FingerprintingPresentation:
     def notify_error(self, message: str):
         pass
 
+    def notify_secondary_progress(self, progress: float):
+        pass
+
 
 #
 # Control for fingerprint management.
@@ -431,17 +436,21 @@ class FingerprintingControl:
     #
     def __init__(self,
                  database_folder: str,
+                 executor: Executor,
                  presentation: FingerprintingPresentation,
                  storage: FingerprintingStorage = None,
                  time_provider=None,
                  id_generator=None,
+                 log=None,
                  debug_function=None):
+        self.executor = executor
         self.presentation = presentation
         self.time_provider = time_provider if time_provider is not None else self.__time_provider
         self.generate_id = id_generator if id_generator is not None else generate_id
         self.storage = storage if storage is not None else FingerprintingStorage(database_folder=database_folder,
                                                                                  id_generator=self.generate_id,
                                                                                  debug_function=debug_function)
+        self.log = log
         self.debug = debug_function
 
         self.files = []
@@ -616,6 +625,123 @@ class FingerprintingControl:
             self.__eventually_unmount_veracrypt_backup(veracrypt_backup, actual_mount_point)
 
     #
+    #
+    #
+    def create_encrypted_backup(self,
+                                backup_name: str,
+                                algorithm: str,
+                                hash_algorithm: str,
+                                folders: [str],
+                                burn: bool):
+        DVD_RAW_SIZE = 8543666176
+        backup_label = backup_name
+
+        working_folder = Config.working_folder()
+        veracrypt_image_folder = f'{working_folder}/{backup_name}_contents'
+        veracrypt_image_file = f'{veracrypt_image_folder}/{backup_name}.veracrypt'
+        veracrypt_mount_point = f'/Volumes/{backup_name}'
+        opt_image_file = f'{working_folder}/{backup_name}'
+        opt_image_file_with_ext = f'{opt_image_file}.dmg'
+        key_file = Config.encrypted_backup_key_file()
+
+        try:
+            self.presentation.notify_message('Scanning files...')
+            files_to_backup = enumerate_files(folders)
+            self.presentation.notify_message(utilities.file_enumeration_message(files_to_backup))
+            total_size = sum(file.size for file in files_to_backup)
+            size = int(round((total_size + len(files_to_backup) * 10 * 1024) * 1.02))
+
+            # TODO: check size
+
+            self.presentation.notify_message(f'Cleaning up working area ({working_folder})...')
+
+            if Path(working_folder).exists():
+                shutil.rmtree(working_folder)
+
+            os.makedirs(veracrypt_image_folder, exist_ok=True)
+
+            def veracrypt_post_processor(string: str):
+                self.presentation.notify_file(string, is_new=False)  # FIXME: use a specific notify_status()
+
+            self.__execute([utilities.VERACRYPT,
+                            '--text',
+                            '--non-interactive',
+                            '--create',
+                            veracrypt_image_file,
+                            '--volume-type=normal',
+                            f'--size={size}',
+                            f'--encryption={algorithm}',
+                            f'--hash={hash_algorithm}',
+                            '--filesystem=hfs',
+                            '--keyfiles',
+                            key_file,
+                            '--quick',
+                            '--random-source=/dev/urandom'],
+                           veracrypt_post_processor,
+                           fail_on_result_code=True)
+
+            veracrypt_image_size = os.stat(veracrypt_image_file).st_size
+            self.presentation.notify_message(f'Veracrypt image size is {format_bytes(veracrypt_image_size)}')
+
+            self.presentation.notify_message('Mounting encrypted image...')
+            veracrypt_mount_image(veracrypt_image_file, veracrypt_mount_point, key_file, self.log)
+
+            self.presentation.notify_message('Copying files...')
+            sub_progress = 0
+            self.presentation.notify_secondary_progress(0)
+
+            for file in files_to_backup:
+                parent = None
+
+                for folder in folders:
+                    if file.folder.startswith(folder):
+                        parent = Path(folder).name
+                        break
+
+                assert parent is not None
+                target_folder = f'{veracrypt_mount_point}/{parent}'
+                os.makedirs(target_folder, exist_ok=True)
+                # Can't use shutils.copy*() because they don't preserve extended attributes
+                self.__execute(['cp', '-p', file.path, f'{target_folder}/{file.name}'], log_cmdline=False, fail_on_result_code=True)
+                sub_progress += 1
+                self.presentation.notify_secondary_progress(sub_progress / len(files_to_backup))
+                self.presentation.notify_file(file.name, is_new=False)
+
+            self.presentation.notify_message('Unmounting encrypted image...')
+            veracrypt_unmount_image(veracrypt_mount_point, self.log)
+
+            # self.widgets.signal_status.emit('')
+            # -hfs because we don't know how to retrieve an unique id for -udf or -joliet.
+            self.__execute(['hdiutil', 'makehybrid', '-o', opt_image_file, veracrypt_image_folder,
+                            '-ov', '-hfs', '-default-volume-name', backup_label], fail_on_result_code=True)
+
+            opt_image_size = os.stat(opt_image_file_with_ext).st_size
+            self.presentation.notify_message(f'Burn image size is {format_bytes(opt_image_size)}')
+
+            if burn:
+                optical_mount_point = f'/Volumes/{backup_name}'
+
+                # It seems it's impossible to prevent drutil from ejecting the media.
+                self.__execute(['drutil', 'burn', '-noverify', '-speed', '6', opt_image_file_with_ext], fail_on_result_code=True)
+
+                while not os.path.exists(optical_mount_point):
+                    self.presentation.notify_message('Optical disk not mounted, please close the tray.')
+                    # TODO utilities.inject_optical_disc()
+                    time.sleep(5)
+
+                self.register_backup(mount_point=optical_mount_point, label=backup_label)
+                self.check_backup(optical_mount_point)
+                self.__execute(['hdiutil', 'detach', optical_mount_point], fail_on_result_code=True)
+                utilities.eject_optical_disc(optical_mount_point)
+        except BaseException as e:
+            self.presentation.notify_error(f'ERROR: Procedure failed: {e}')
+        finally:
+            if burn:
+                self.presentation.notify_message(f'Cleaning up working area ({working_folder})...')
+                shutil.rmtree(working_folder)
+                # FIXME: what if the verification fails? The backup should be removed.
+
+    #
     # Returns tuples (base_path, label) for all currently mounted backup volumes which have been already registered
     # or not in function of the 'registered' parameter.
     #
@@ -638,6 +764,24 @@ class FingerprintingControl:
         self.storage.close()
 
         return sorted(result)
+
+    #
+    # Execs a process and returns the exit code. Output is written to log file and to the console.
+    # FIXME: duplicated in solidblue.
+    #
+    def __execute(self, args, output_processor=None, fail_on_result_code: bool = False, log_cmdline: bool = True):
+        def __default_post_processor(string: str):
+            self.presentation.notify_message(string)
+
+        if output_processor is None:
+            output_processor = __default_post_processor
+
+        if log_cmdline:
+            self.presentation.notify_message(' '.join(args))
+        else:
+            self.log(' '.join(args))
+
+        return self.executor.execute(args, output_processor=output_processor, fail_on_result_code=fail_on_result_code)
 
     #
     # Check whether this is a Veracrypt backup. If it is, mount the encrypted volume and returns the new mount point.
