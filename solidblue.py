@@ -568,49 +568,6 @@ class MainWindow(QWidget):
                                                             debug_function=self.debug)
 
     #
-    # Pushes files to a target.
-    #
-    def __push_files(self, config: Config.PushFiles):
-        self.__start_notification(f'Pushing files to {config.server}...')
-        # --ignore-errors is needed to ensure deletions complete also in case of error.
-        flags = ['--delete', '--delete-excluded', '--delete-before', '--progress', '--stats', '-rtvv', '--ignore-errors']
-        flags += config.extra_rsync_flags
-        flags += [f'--exclude-from={self.macos_excludes}']
-        rsync = Config.resource('rsync3')
-
-        for item_name, item in config.items.items():
-            self.widgets.log_bold_to_console(f'Syncing {item_name}...')
-
-            if not os.path.exists(item.source):
-                self.widgets.log_red_to_console(f'Source not mounted: {item.source}')
-            else:
-                target = f'{config.server}:{item.target}/' if config.server else f'{item.target}/'
-                self.__execute([rsync] + flags + item.extra_rsync_flags + [f'{item.source}/', target], self.rsync.ccc_post_processor)
-
-        self.__completion_notification(f'Files pushed to {config.server}.')
-
-    #
-    # Checks all mounted volumes.
-    #
-    def __check_all_volumes(self):
-        volumes = sorted(os.listdir('/Volumes'))
-        self.__start_notification(f'Checking volumes: {", ".join(volumes)}')
-        step_count = len(volumes)
-        step = 0
-
-        for volume in volumes:
-            self.widgets.log_bold_to_console(f'Checking volume: {volume} ...')
-            return_code = self.__execute(['sudo', 'diskutil', 'verifyVolume', volume])
-
-            if return_code != 0:
-                self.widgets.log_red_to_console(f'WARNING: Exit code: {return_code}')
-
-            step += 1
-            self.widgets.signal_progress.emit(1.0 * step / step_count)
-
-        self.__completion_notification("All volumes checked")
-
-    #
     # Scans files for consistency.
     #
     def __scan_files(self, config: Config.Scan):
@@ -621,6 +578,21 @@ class MainWindow(QWidget):
             self.__start_notification(f'Scanning {config.label}...')
             self.fingerprinting_control.scan(config.path, config.filter, options.only_new_files)
             self.__completion_notification(f'{config.label} scanned.')
+
+    #
+    #
+    #
+    def __create_encrypted_backup(self):
+        options = self.widgets.ask_backup_options()
+
+        if options:
+            self.__start_notification(f'Creating encrypted backup...')
+            self.fingerprinting_control.create_encrypted_backup(folders=options.folders,
+                                                                backup_name=options.label,
+                                                                algorithm=options.algorithm,
+                                                                hash_algorithm=options.hash_algorithm,
+                                                                burn=options.burn)
+            self.__completion_notification('Encrypted backup created.')
 
     #
     # Registers a backup in an external volume.
@@ -663,19 +635,47 @@ class MainWindow(QWidget):
         self.widgets.log_to_console(table)
 
     #
+    # Pushes files to a target.
     #
-    #
-    def __create_encrypted_backup(self):
-        options = self.widgets.ask_backup_options()
+    def __push_files(self, config: Config.PushFiles):
+        self.__start_notification(f'Pushing files to {config.server}...')
+        # --ignore-errors is needed to ensure deletions complete also in case of error.
+        flags = ['--delete', '--delete-excluded', '--delete-before', '--progress', '--stats', '-rtvv', '--ignore-errors']
+        flags += config.extra_rsync_flags
+        flags += [f'--exclude-from={self.macos_excludes}']
+        rsync = Config.resource('rsync3')
 
-        if options:
-            self.__start_notification(f'Creating encrypted backup...')
-            self.fingerprinting_control.create_encrypted_backup(folders=options.folders,
-                                                                backup_name=options.label,
-                                                                algorithm=options.algorithm,
-                                                                hash_algorithm=options.hash_algorithm,
-                                                                burn=options.burn)
-            self.__completion_notification('Encrypted backup created.')
+        for item_name, item in config.items.items():
+            self.widgets.log_bold_to_console(f'Syncing {item_name}...')
+
+            if not os.path.exists(item.source):
+                self.widgets.log_red_to_console(f'Source not mounted: {item.source}')
+            else:
+                target = f'{config.server}:{item.target}/' if config.server else f'{item.target}/'
+                self.__execute([rsync] + flags + item.extra_rsync_flags + [f'{item.source}/', target], self.rsync.ccc_post_processor)
+
+        self.__completion_notification(f'Files pushed to {config.server}.')
+
+    #
+    # Checks all mounted volumes.
+    #
+    def __check_all_volumes(self):
+        volumes = sorted(os.listdir('/Volumes'))
+        self.__start_notification(f'Checking volumes: {", ".join(volumes)}')
+        step_count = len(volumes)
+        step = 0
+
+        for volume in volumes:
+            self.widgets.log_bold_to_console(f'Checking volume: {volume} ...')
+            return_code = self.__execute(['sudo', 'diskutil', 'verifyVolume', volume])
+
+            if return_code != 0:
+                self.widgets.log_red_to_console(f'WARNING: Exit code: {return_code}')
+
+            step += 1
+            self.widgets.signal_progress.emit(1.0 * step / step_count)
+
+        self.__completion_notification("All volumes checked")
 
     #
     # Execs a process and returns the exit code. Output is written to log file and to the console.
