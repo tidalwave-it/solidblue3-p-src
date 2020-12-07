@@ -14,7 +14,6 @@
 
 import datetime
 import hashlib
-import mmap
 import os
 import re
 import sqlite3
@@ -24,6 +23,7 @@ import time
 from collections import namedtuple
 from pathlib import Path
 
+import mmap
 import xattr
 
 from config import Config
@@ -259,9 +259,11 @@ class FingerprintingStorage:
     #
     # Adds a backup file.
     #
-    def add_backup_item(self, backup_id: str, file_id, backup_file: str, commit=False):
-        t = (self.generate_id(), backup_id, file_id, backup_file)
+    def add_backup_item(self, backup_id: str, file_id, backup_file: str, commit=False) -> str:
+        backup_item_id = self.generate_id()
+        t = (backup_item_id, backup_id, file_id, backup_file)
         self.__update('INSERT INTO backup_files(id, backup_id, file_id, path) VALUES(?, ?, ?, ?)', t, commit)
+        return backup_item_id
 
     #
     # Sets a single attribute.
@@ -577,20 +579,26 @@ class FingerprintingControl:
 
         def check_files(sub_folder: str, file_name: str):
             nonlocal progress, backup, new_timestamp
-            path = f'{sub_folder}/{file_name}'
-            file_id = self.__find_file_id(path)
+            file_path = f'{sub_folder}/{file_name}'
+            backup_file = file_path.replace(f'{actual_mount_point}/', '')
+            file_id = self.__find_file_id(file_path)
 
             if file_id:
                 original_fingerprint, _ = self.storage.find_latest_fingerprint_by_id(file_id)
-                algorithm, fingerprint = self.storage.compute_fingerprint(path)
-                self.presentation.notify_file(path, is_new=False)
+                algorithm, fingerprint = self.storage.compute_fingerprint(file_path)
+                self.presentation.notify_file(file_path, is_new=False)
                 backup_item_id = self.storage.find_backup_item_id(backup.id, file_id)
+
+                if not backup_item_id:
+                    self.presentation.notify_error(f'File was not registered as part of the backup: {backup_file} - registering now')
+                    backup_item_id = self.storage.add_backup_item(backup.id, file_id, backup_file)
+
                 self.storage.add_fingerprint(backup_item_id, file_name, algorithm, fingerprint, new_timestamp)
 
                 if algorithm == 'error':
                     self.presentation.notify_error(f'{file_name}: {algorithm}')
                 elif original_fingerprint != fingerprint:
-                    self.presentation.notify_error(f'Mismatch for {path}: found {original_fingerprint} expected {fingerprint}')
+                    self.presentation.notify_error(f'Mismatch for {file_path}: found {original_fingerprint} expected {fingerprint}')
 
             progress = progress + 1
             self.presentation.notify_progress(progress, file_count)
