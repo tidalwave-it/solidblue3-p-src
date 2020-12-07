@@ -662,18 +662,15 @@ class MainWindow(QWidget):
     def __check_all_volumes(self):
         volumes = sorted(os.listdir('/Volumes'))
         self.__start_notification(f'Checking volumes: {", ".join(volumes)}')
-        step_count = len(volumes)
-        step = 0
 
-        for volume in volumes:
+        for step, volume in enumerate(volumes, start=1):
             self.widgets.log_bold_to_console(f'Checking volume: {volume} ...')
             return_code = self.__execute(['sudo', 'diskutil', 'verifyVolume', volume])
 
             if return_code != 0:
                 self.widgets.log_red_to_console(f'WARNING: Exit code: {return_code}')
 
-            step += 1
-            self.widgets.signal_progress.emit(1.0 * step / step_count)
+            self.widgets.signal_progress.emit(1.0 * step / len(volumes))
 
         self.__completion_notification("All volumes checked")
 
