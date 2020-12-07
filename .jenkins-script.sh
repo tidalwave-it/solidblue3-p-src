@@ -28,7 +28,6 @@ if [ ! -f "$PIPENV" ]; then
     PIPENV="$HOME/Library/Python/3.9/bin/pipenv"
     fi
 
-set +e
 echo "================================ pipenv install"
 "$PIPENV" install
 echo "================================ pipenv check"
@@ -38,6 +37,6 @@ echo "================================ pipenv run coverage run -m unittest"
 echo "================================ pipenv run coverage html"
 "$PIPENV" run coverage html
 echo "================================ pipenv run pylint *.py"
-set -e
+set +e
 "$PIPENV" run pylint *.py
-echo
+exit 0
