@@ -602,7 +602,7 @@ class FingerprintingControl:
                 file_id = self.__find_file_id(backup_file.path)
 
                 if file_id:
-                    self.presentation.notify_file(backup_file.path, is_new=False)
+                    self.presentation.notify_file(file_relative_path, is_new=False)
                     original_fingerprint, _ = self.storage.find_latest_fingerprint_by_id(file_id)
                     algorithm, fingerprint = self.storage.compute_fingerprint(backup_file.path)
                     backup_item_id = self.storage.find_backup_item_id(backup.id, file_id)
@@ -614,9 +614,9 @@ class FingerprintingControl:
                     self.storage.add_fingerprint(backup_item_id, backup_file.name, algorithm, fingerprint, new_timestamp)
 
                     if algorithm == 'error':
-                        self.presentation.notify_error(f'{backup_file.name}: {algorithm}')
+                        self.presentation.notify_error(f'{file_relative_path}: {algorithm}')
                     elif original_fingerprint != fingerprint:
-                        self.presentation.notify_error(f'Mismatch for {backup_file.path}: found {original_fingerprint} expected {fingerprint}')
+                        self.presentation.notify_error(f'Mismatch for {file_relative_path}: found {original_fingerprint} expected {fingerprint}')
 
                 self.presentation.notify_progress(progress, len(backup_files))
 
@@ -700,10 +700,10 @@ class FingerprintingControl:
                 assert parent is not None
                 target_folder = f'{veracrypt_mount_point}/{parent}'
                 os.makedirs(target_folder, exist_ok=True)
+                self.presentation.notify_file(file.name, is_new=False)
                 # Can't use shutils.copy*() because they don't preserve extended attributes
                 self.__execute(['cp', '-p', file.path, f'{target_folder}/{file.name}'], log_cmdline=False, fail_on_result_code=True)
                 self.presentation.notify_secondary_progress(sub_progress / len(files_to_backup))
-                self.presentation.notify_file(file.name, is_new=False)
 
             self.presentation.notify_message('Unmounting encrypted image...')
             veracrypt_unmount_image(veracrypt_mount_point, self.log)
