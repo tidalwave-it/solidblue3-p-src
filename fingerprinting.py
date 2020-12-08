@@ -666,9 +666,6 @@ class FingerprintingControl:
 
             os.makedirs(veracrypt_image_folder, exist_ok=True)
 
-            def veracrypt_post_processor(string: str):
-                self.presentation.notify_file(string, is_new=False)  # FIXME: use a specific notify_status()
-
             self.__execute([utilities.VERACRYPT,
                             '--text',
                             '--non-interactive',
@@ -683,7 +680,7 @@ class FingerprintingControl:
                             key_file,
                             '--quick',
                             '--random-source=/dev/urandom'],
-                           veracrypt_post_processor,
+                           self.veracrypt_post_processor,
                            fail_on_result_code=True)
 
             veracrypt_image_size = os.stat(veracrypt_image_file).st_size
@@ -726,7 +723,8 @@ class FingerprintingControl:
                 optical_mount_point = f'/Volumes/{backup_name}'
 
                 # It seems it's impossible to prevent drutil from ejecting the media.
-                self.__execute(['drutil', 'burn', '-noverify', '-speed', '6', opt_image_file_with_ext], fail_on_result_code=True)
+                self.__execute(['drutil', 'burn', '-noverify', '-speed', '6', opt_image_file_with_ext],
+                               output_processor=self.drutil_post_processor, fail_on_result_code=True)
 
                 while not os.path.exists(optical_mount_point):
                     self.presentation.notify_message('Optical disk not mounted, please close the tray.')
@@ -786,6 +784,46 @@ class FingerprintingControl:
             self.log(' '.join(args))
 
         return self.executor.execute(args, output_processor=output_processor, fail_on_result_code=fail_on_result_code)
+
+    #
+    # Post-processor for Veracrypt output.
+    #
+    def veracrypt_post_processor(self, string: str):
+        string = string.strip()
+        progress, speed, left = extract('Done: *([0-9.]+)% *Speed: *([0-9].+) *MiB/s *Left: *([0-9]+) *(s|minutes)', string)
+        spurious, _, _ = extract('Done: *([0-9.-]+)% *Speed: *Left:$', string)
+
+        if not spurious:
+            if progress:
+                self.presentation.notify_secondary_progress(float(progress))
+
+            if string != '':
+                if 'Error' in string:
+                    self.presentation.notify_error(string)
+                elif not progress:
+                    self.presentation.notify_message(string)
+
+                self.presentation.notify_file(string, is_new=False)  # FIXME: use a specific notify_status()
+
+    #
+    # Post-processor for drutil output.
+    #
+    def drutil_post_processor(self, string: str):
+        string = string.strip()
+
+        if string != '':
+            progress, _, _ = extract('^.*] ([0-9]+)%.*$', string)
+            digits, _, _ = extract('^.*([0-9]+)%.*$', string)
+            closing, _, _ = extract('^.*(Closing).*$', string)
+
+            if progress:
+                self.presentation.notify_secondary_progress(float(progress))
+
+            elif closing:
+                self.presentation.notify_message('Finalising...')
+
+            elif not digits:
+                self.presentation.notify_message(string)
 
     #
     # Check whether this is a Veracrypt backup. If it is, mount the encrypted volume and returns the new mount point.

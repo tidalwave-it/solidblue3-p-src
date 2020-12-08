@@ -18,8 +18,6 @@ import traceback
 
 from PySide2.QtCore import QRunnable, Signal, QObject, Slot, QThreadPool
 
-from utilities import html_red
-
 
 class WorkerSignals(QObject):
     finished = Signal()
@@ -69,29 +67,18 @@ class Executor:
         self.log_exception = log_exception
 
     #
+    #
+    #
+    def submit(self, worker):
+        self.thread_pool.start(worker)
+
+    #
     # Execs a process and returns the exit code. Output is written to log file and to the console.
     #
-    def execute(self, args, output_processor, fail_on_result_code: bool = False):
-        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='latin-1')
-
-        while True:
-            try:
-                line = process.stdout.readline()
-
-                if line == '' and process.poll() is not None:
-                    break
-
-                output_processor(line[0:-1])
-            except UnicodeDecodeError as e:
-                self.log_exception('>>>> Error in decoding subprocess output', e)
-                line = html_red('ERROR in decoding subprocess output')
-                # FIXME: self.widgets.log_to_console(line)
-            except BaseException as e:
-                self.log_exception('>>>> Error in processing subprocess output', e)
-                line = html_red('ERROR in processing subprocess output')
-                # FIXME: self.widgets.log_to_console(line)
-
-        self.log('>>>> subprocess terminated')
+    def execute(self, args, output_processor, fail_on_result_code: bool = False, charset: str = 'utf-8'):  # 'latin-1'
+        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        self.process_output(process, output_processor, charset)
+        self.log(f'>>>> subprocess terminated ({process.returncode})')
 
         if fail_on_result_code and process.returncode != 0:
             raise RuntimeError(f'Error: process return code is {process.returncode}')
@@ -101,5 +88,33 @@ class Executor:
     #
     #
     #
-    def submit(self, worker):
-        self.thread_pool.start(worker)
+    def process_output(self, process, output_processor, charset: str = 'utf-8'):
+        while True:
+            line = self.special_read_line(process.stdout, charset)
+
+            if line == '' and process.poll() is not None:
+                break
+
+            output_processor(line[0:-1])
+
+    #
+    #
+    #
+    @staticmethod
+    def special_read_line(readable, charset: str) -> str:
+        line_buffer = bytearray()
+
+        while True:
+            buffer = readable.read(1)
+            b = 0
+
+            if buffer:
+                b = buffer[0]
+                b = b if b != 8 else 13
+                line_buffer.append(b)
+
+            if not buffer or b == 13 or b == 10:
+                try:
+                    return line_buffer.decode(charset)
+                except BaseException as e:
+                    return f'Warning: {str(e)} - {line_buffer.hex()}'
