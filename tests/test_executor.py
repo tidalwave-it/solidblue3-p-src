@@ -11,8 +11,9 @@
 #  __maintainer__ = "Fabrizio Giudici"
 #  __email__ = "fabrizio.giudici@tidalwave.it"
 #  __status__ = "Prototype"
-
+import os
 import unittest
+from pathlib import Path
 
 from executor import Executor
 
@@ -24,7 +25,7 @@ class TestExecutor(unittest.TestCase):
     def test_special_readline(self):
         actual = []
 
-        with open("../test-resources/drutil/drutil.log", "rb") as file:
+        with open(self.__test_resource('drutil/drutil.log'), 'rb') as file:
             while True:
                 string = Executor.special_read_line(file, 'utf-8')
 
@@ -252,6 +253,11 @@ class TestExecutor(unittest.TestCase):
 
         print(actual)
         self.assertEqual(actual, expected)
+
+    @staticmethod
+    def __test_resource(name: str) -> str:
+        script_path = Path(os.path.realpath(__file__)).parent.parent
+        return f'{script_path}/test-resources/{name}'
 
 
 if __name__ == '__main__':

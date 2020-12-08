@@ -30,7 +30,7 @@ import xattr
 import utilities
 from config import Config
 from executor import Executor
-from utilities import format_bytes, generate_id, extract, enumerate_files, veracrypt_mount_image, veracrypt_unmount_image
+from utilities import format_bytes, generate_id, extract, veracrypt_mount_image, veracrypt_unmount_image
 
 XATTR_ID = 'it.tidalwave.datamanager.id'
 XATTR_FINGERPRINT = 'it.tidalwave.datamanager.fingerprint.md5'
@@ -62,6 +62,8 @@ class FingerprintingStorageStats:
 # Storage support for fingerprinting.
 #
 class FingerprintingStorage:
+    FileInfo = namedtuple("FileInfo", 'name, folder, path, size')
+
     def __init__(self, database_folder: str, stats: FingerprintingStorageStats = None, id_generator=None, debug_function=None):
         self.generate_id = id_generator if id_generator is not None else generate_id
         self.debug = debug_function
@@ -283,16 +285,19 @@ class FingerprintingStorage:
         return xattr.getxattr(path, name).decode(CHARSET) if name in xattr.listxattr(path) else None
 
     #
-    # Scans all the files applying the given function. Returns the latest result from function.
+    #
     #
     @staticmethod
-    def walk(folder: str, file_filter: str, function):
-        result = None
+    def enumerate_files(folders: [str], file_filter: str = '.*') -> [FileInfo]:
+        result = []
 
-        for sub_folder, _, files in os.walk(folder, followlinks=True):
-            for item in files:
-                if re.search(file_filter, item.lower()):
-                    result = function(sub_folder, item)
+        for folder in folders:
+            for sub_folder, _, files in os.walk(folder, followlinks=True):
+                for file in files:
+                    if re.search(file_filter, file.lower()):
+                        path = f'{sub_folder}/{file}'
+                        file_info = FingerprintingStorage.FileInfo(file, sub_folder, path, os.stat(path).st_size)
+                        result += [file_info]
 
         return result
 
@@ -453,9 +458,6 @@ class FingerprintingControl:
         self.log = log
         self.debug = debug_function
 
-        self.files = []
-        self.path_map_by_id = {}
-
     #
     # Scans files.
     #
@@ -465,8 +467,8 @@ class FingerprintingControl:
         try:
             stats.reset()
             self.storage.open()
-            self.__count_files(folder, file_filter)
-            self.__load_id_map()
+            files = self.__count_files([folder], file_filter)
+            path_map_by_id = self.__load_id_map()
 
             if only_new_files:
                 self.presentation.notify_message('Scanning only new files')
@@ -475,8 +477,9 @@ class FingerprintingControl:
             new_timestamp_str = new_timestamp.strftime("%Y-%m-%d %H:%M:%S")
             step = 0
 
-            for path in self.files:
-                file_name = str(Path(path).name)
+            for file in files:
+                path = file.path
+                file_name = file.name
                 file_id, fingerprint, _ = self.__get_attributes(path)
 
                 if file_id is None:
@@ -487,10 +490,10 @@ class FingerprintingControl:
                     if only_new_files:
                         step += 1
                         self.presentation.notify_file(path, is_new=False)
-                        self.presentation.notify_progress(step, len(self.files))
+                        self.presentation.notify_progress(step, len(files))
                         continue
 
-                    prev_path = self.path_map_by_id[file_id]
+                    prev_path = path_map_by_id[file_id]
 
                     if prev_path != path:
                         self.presentation.notify_file_moved(prev_path, path)
@@ -510,7 +513,7 @@ class FingerprintingControl:
                         self.presentation.notify_error(f'Mismatch for {path}: found {new_fingerprint} expected {fingerprint}')
 
                 step += 1
-                self.presentation.notify_progress(step, len(self.files))
+                self.presentation.notify_progress(step, len(files))
         finally:
             stats.stop()
             total_reads = stats.plain_io_reads + stats.mmap_reads
@@ -544,14 +547,13 @@ class FingerprintingControl:
                 self.presentation.notify_error('Backup with the same label already registered')
                 return
 
-            self.presentation.notify_message(f'Counting files in "{mount_point}"... {actual_mount_point}')
+            files = self.__count_files([actual_mount_point])
 
             # backup_files = [file.path for file in enumerate_files(base_path)]
             backup_files = []
-            for file in enumerate_files([actual_mount_point]):
+            for file in files:
                 backup_files += [file.path]
 
-            self.presentation.notify_file_count(len(backup_files))
             registration_date = self.time_provider()
             backup_id = self.storage.add_backup(actual_mount_point, label, volume_id, creation_date, registration_date, veracrypt_backup)
             count = 0
@@ -592,11 +594,8 @@ class FingerprintingControl:
                 self.presentation.notify_error(f'{backup.base_path} is not a registered backup')
                 return
 
+            backup_files = self.__count_files([actual_mount_point])
             check_timestamp = self.time_provider()
-            self.presentation.notify_message('Counting files...')
-            backup_files = enumerate_files([actual_mount_point])
-            self.presentation.notify_file_count(len(backup_files))
-            self.presentation.notify_message(utilities.file_enumeration_message(backup_files))
 
             for progress, backup_file in enumerate(backup_files, start=1):
                 file_relative_path = backup_file.path.replace(f'{actual_mount_point}/', '')
@@ -651,9 +650,7 @@ class FingerprintingControl:
         key_file = Config.encrypted_backup_key_file()
 
         try:
-            self.presentation.notify_message('Scanning files...')
-            files_to_backup = enumerate_files(folders)
-            self.presentation.notify_message(utilities.file_enumeration_message(files_to_backup))
+            files_to_backup = self.__count_files(folders)
             total_size = sum(file.size for file in files_to_backup)
             size = int(round((total_size + len(files_to_backup) * 10 * 1024) * 1.02))
 
@@ -847,6 +844,18 @@ class FingerprintingControl:
     #
     #
     #
+    def __count_files(self, folders: [str], file_filter: str = '.*') -> [FingerprintingStorage.FileInfo]:
+        self.presentation.notify_counting()
+        self.presentation.notify_message(f'Counting files in {folders}...')
+        files = self.storage.enumerate_files(folders, file_filter)
+        files = sorted(files, key=lambda file: file.path)
+        self.presentation.notify_file_count(len(files))
+        self.presentation.notify_message(utilities.file_enumeration_message(files))
+        return files
+
+    #
+    #
+    #
     def __eventually_unmount_veracrypt_backup(self, veracrypt_backup: bool, mount_point: str):
         if veracrypt_backup:
             self.presentation.notify_message(f'Unmounting veracrypt image at "{mount_point}" ...')
@@ -865,30 +874,16 @@ class FingerprintingControl:
         return file_id
 
     #
-    # Count the files.
-    #
-    def __count_files(self, folder: str, file_filter: str):
-        def count(sub_folder: str, file_name: str):
-            nonlocal files
-            files += [f'{sub_folder}/{file_name}']
-            return files
-
-        self.presentation.notify_counting()
-        self.debug(f'Counting files in {folder} ...')
-        files = []
-        self.files = sorted(self.storage.walk(folder, file_filter, count))
-        self.debug(f'>>>> file count: {len(self.files)}')
-        self.presentation.notify_file_count(len(self.files))
-
     #
     #
-    #
-    def __load_id_map(self):
+    def __load_id_map(self) -> dict:
         self.debug('Retrieving the id mappings ...')
-        self.path_map_by_id = {}
+        path_map_by_id = {}
 
         for file_id, path in self.storage.find_mappings():
-            self.path_map_by_id[file_id] = path
+            path_map_by_id[file_id] = path
+
+        return path_map_by_id
 
     #
     # Gets (file_id, fingerprint, timestamp) attributes for the given path.

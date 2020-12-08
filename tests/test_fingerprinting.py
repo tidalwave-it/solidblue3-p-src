@@ -11,13 +11,13 @@
 #  __maintainer__ = "Fabrizio Giudici"
 #  __email__ = "fabrizio.giudici@tidalwave.it"
 #  __status__ = "Prototype"
-
+import os
 import unittest
 from datetime import datetime
 from pathlib import Path
 
 from executor import Executor
-from fingerprinting import FingerprintingControl, FingerprintingPresentation, FingerprintingStorageStats
+from fingerprinting import FingerprintingControl, FingerprintingPresentation, FingerprintingStorageStats, FingerprintingStorage
 
 
 #
@@ -116,11 +116,15 @@ class MockStorage:
     def add_fingerprint(self, file_id: str, file_name: str, algorithm: str, fingerprint: str, timestamp, commit=False):
         self.fingerprints_done += [('insert_fingerprint()', file_id, algorithm, fingerprint, timestamp, commit)]
 
-    def walk(self, folder: str, filter: str, function):
-        result = None
+    def enumerate_files(self, folders: [str], file_filter: str = '.*') -> [FingerprintingStorage.FileInfo]:
+        result = []
 
         for file in self.files:
-            result = function(str(Path(file).parent), str(Path(file).name))
+            file_info = FingerprintingStorage.FileInfo(name=str(Path(file).name),
+                                                       folder=str(Path(file).parent),
+                                                       path=file,
+                                                       size=0)
+            result += [file_info]
 
         return result
 
@@ -167,9 +171,6 @@ class MockPresentation(FingerprintingPresentation):
         self.things_done += [('notify_error()', message)]
 
 
-#
-#
-#
 class TestFingerprintControl(unittest.TestCase):
     under_test = None
     storage = None
@@ -209,7 +210,9 @@ class TestFingerprintControl(unittest.TestCase):
             ('set_attribute()', 'folder/new_file_with_error', 'it.tidalwave.datamanager.id', '00000000-0000-0000-0000-000000001002'),
 
             'notify_counting()',
+            ('notify_message()', "Counting files in ['folder']..."),
             ('notify_file_count()', 6),
+            ('notify_message()', 'Found 6 files (0 bytes)'),
             ('notify_file_moved()', 'oldfolder/file_moved', 'folder/file_moved'),
             ('notify_file()', 'folder/file_moved', False),
             ('notify_progress()', 1, 6),
@@ -252,7 +255,9 @@ class TestFingerprintControl(unittest.TestCase):
             ('set_attribute()', 'folder/new_file_with_error', 'it.tidalwave.datamanager.id', '00000000-0000-0000-0000-000000001002'),
 
             'notify_counting()',
+            ('notify_message()', "Counting files in ['folder']..."),
             ('notify_file_count()', 6),
+            ('notify_message()', 'Found 6 files (0 bytes)'),
             ('notify_message()', 'Scanning only new files'),
             ('notify_file()', 'folder/file_moved', False),
             ('notify_progress()', 1, 6),
@@ -278,7 +283,7 @@ class TestFingerprintControl(unittest.TestCase):
     def test_veracrypt_post_processor(self):
         self.__setup_fixture()
 
-        with open("../test-resources/veracrypt/veracrypt.log", "rb") as file:
+        with open(self.__test_resource('veracrypt/veracrypt.log'), 'rb') as file:
             process = MockProcess(file)
             self.executor.process_output(process, self.under_test.veracrypt_post_processor)
 
@@ -1160,7 +1165,7 @@ class TestFingerprintControl(unittest.TestCase):
     def test_drutil_post_processor(self):
         self.__setup_fixture()
 
-        with open("../test-resources/drutil/drutil.log", "rb") as file:
+        with open(self.__test_resource('drutil/drutil.log'), 'rb') as file:
             process = MockProcess(file)
             self.executor.process_output(process, self.under_test.drutil_post_processor)
 
@@ -1266,6 +1271,11 @@ class TestFingerprintControl(unittest.TestCase):
     def __debug(message: str):
         # print(message, flush=True)
         pass
+
+    @staticmethod
+    def __test_resource(name: str) -> str:
+        script_path = Path(os.path.realpath(__file__)).parent.parent
+        return f'{script_path}/test-resources/{name}'
 
 
 if __name__ == '__main__':

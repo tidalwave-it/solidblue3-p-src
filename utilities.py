@@ -16,7 +16,6 @@ import os
 import re
 import subprocess
 import uuid
-from collections import namedtuple
 
 VERACRYPT = '/Applications/VeraCrypt.app/Contents/MacOS/VeraCrypt'
 
@@ -77,26 +76,6 @@ def format_bytes(size: int) -> str:
 #
 def generate_id() -> str:
     return str(uuid.uuid4())
-
-
-FileInfo = namedtuple("FileInfo", 'name, folder, path, size')
-
-
-#
-#
-#
-def enumerate_files(folders: [str], file_filter: str = '.*') -> [FileInfo]:
-    result = []
-
-    for folder in folders:
-        for sub_folder, _, files in os.walk(folder, followlinks=True):
-            for file in files:
-                if re.search(file_filter, file.lower()):
-                    path = f'{sub_folder}/{file}'
-                    file_info = FileInfo(file, sub_folder, path, os.stat(path).st_size)
-                    result += [file_info]
-
-    return result
 
 
 #
