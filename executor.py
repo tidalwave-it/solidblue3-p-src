@@ -106,14 +106,14 @@ class Executor:
 
         while True:
             buffer = readable.read(1)
-            b = 0
+            byte = 0
 
             if buffer:
-                b = buffer[0]
-                b = b if b != 8 else 13
-                line_buffer.append(b)
+                byte = buffer[0]
+                byte = byte if byte != 8 else 13
+                line_buffer.append(byte)
 
-            if not buffer or b == 13 or b == 10:
+            if not buffer or byte == 13 or byte == 10:
                 try:
                     return line_buffer.decode(charset)
                 except BaseException as e:

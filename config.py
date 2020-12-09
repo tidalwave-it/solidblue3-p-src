@@ -51,16 +51,16 @@ class Config:
 
     @staticmethod
     def scan_config() -> [Scan]:
-        r = {}
+        result = {}
 
-        for sc in Config.config()['scan']:
-            key = list(sc.keys())[0]
-            dict = sc[key]
+        for scan in Config.config()['scan']:
+            key = list(scan.keys())[0]
+            dict = scan[key]
             path = dict['path']
             dict['path'] = path if path.startswith('/') else f'{Config.home_folder()}/{path}'
-            r[key] = Config.Scan(**dict)
+            result[key] = Config.Scan(**dict)
 
-        return r
+        return result
 
     PushFiles = namedtuple('PushFiles', 'label, icon, server, extra_rsync_flags, items')
     PushFilesItem = namedtuple('PushFilesItem', 'source, target, extra_rsync_flags')

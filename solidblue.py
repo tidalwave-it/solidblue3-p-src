@@ -216,8 +216,8 @@ class RegisteredBackupDialog(DialogSupport):
         self.signal_populate.connect(self.__slot_populate)
 
     def user_options(self) -> Options:
-        s = self.cb_volume_mount_point.currentText()
-        volume_mount_point, label, _ = utilities.extract(r'^(.*) \(.*\)$', s)
+        string = self.cb_volume_mount_point.currentText()
+        volume_mount_point, label, _ = utilities.extract(r'^(.*) \(.*\)$', string)
         return RegisteredBackupDialog.Options(base_path=volume_mount_point,
                                               label=label,
                                               eject_after_scan=self.cb_eject_after_scan.isChecked())
@@ -575,8 +575,8 @@ class MainWindow(QWidget):
         self.executor = Executor(self.log, self.log_exception)
         self.widgets = Widgets(self, self.executor, self.log, self.log_exception)
 
-        for sc in Config.scan_config().values():
-            self.widgets.add_button(self, sc.icon, f'Scan {sc.label}', self.__scan_files, sc)
+        for scan in Config.scan_config().values():
+            self.widgets.add_button(self, scan.icon, f'Scan {scan.label}', self.__scan_files, scan)
 
         self.widgets.add_separator()
         self.widgets.add_button(self, 'create-backup', 'Create backup', self.__create_encrypted_backup)
@@ -746,8 +746,8 @@ class MainWindow(QWidget):
     def __append_sync_timestamp(self, folder: str, text: str):
         latest_sync_file = f'{folder}/.latest-sync'
 
-        with open(latest_sync_file, 'at') as f:
-            f.write(f'{self.__current_timestamp()}: {text}\n')
+        with open(latest_sync_file, 'at') as file:
+            file.write(f'{self.__current_timestamp()}: {text}\n')
 
     #
     # Return a properly formatted timestamp.

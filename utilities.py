@@ -60,15 +60,15 @@ def html_bold(text: str) -> str:
 #
 def format_bytes(size: int) -> str:
     power = 10 ** 3
-    n = 0
+    i = 0
     power_labels = {0: 'bytes', 1: 'kB', 2: 'MB', 3: 'GB', 4: 'TB'}
     power_digits = {0: 0, 1: 0, 2: 1, 3: 2, 4: 3}
 
     while size > power:
         size /= power
-        n += 1
+        i += 1
 
-    return f'{round(size, power_digits[n])} {power_labels[n]}'
+    return f'{round(size, power_digits[i])} {power_labels[i]}'
 
 
 #

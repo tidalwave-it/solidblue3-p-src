@@ -153,9 +153,9 @@ class FingerprintingStorage:
     #
     #
     def find_file_id_by_name(self, file_name):
-        r = self.__query('SELECT id FROM files WHERE path LIKE ?', (f'%/{file_name}',))
-        return r[0][0] if len(r) == 1 else None
-        # FIXME: len(r) > 1 should raise an exception
+        rows = self.__query('SELECT id FROM files WHERE path LIKE ?', (f'%/{file_name}',))
+        return rows[0][0] if len(rows) == 1 else None
+        # FIXME: len(rows) > 1 should raise an exception
 
     #
     # Adds a fingerprint into the database.
@@ -306,15 +306,15 @@ class FingerprintingStorage:
     #
     def compute_fingerprint(self, path: str) -> (str, str):
         try:
-            with open(path, 'rb') as f:
+            with open(path, 'rb') as file:
                 size = os.stat(path).st_size
 
                 if size < MMAP_THRESHOLD:  # Preliminary tests, plain I/O is 3x faster
-                    data = f.read()
+                    data = file.read()
                     self.stats.plain_io_reads = self.stats.plain_io_reads + size
                 else:
-                    with mmap.mmap(f.fileno(), length=0, access=mmap.ACCESS_READ) as m:
-                        data = m.read()
+                    with mmap.mmap(file.fileno(), length=0, access=mmap.ACCESS_READ) as stream:
+                        data = stream.read()
                         self.stats.mmap_reads = self.stats.mmap_reads + size
 
                 self.stats.processed_file_count = self.stats.processed_file_count + 1
@@ -362,22 +362,22 @@ class FingerprintingStorage:
 
         def row_factory(cursor, row):
             fields = []
-            datetime_fields = []
+            date_time_fields = []
 
             for field in [col[0] for col in cursor.description]:
                 if re.match('^datetime(.*)$', field):
                     field = field[9:-1]
-                    datetime_fields += [field]
+                    date_time_fields += [field]
 
                 fields += [field]
 
             Row = namedtuple("Row", fields)
             row = Row(*row)
 
-            for field in datetime_fields:
-                dt_str = getattr(row, field)
-                dt = datetime.datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S') if dt_str else None
-                row = row._replace(**{field: dt})
+            for field in date_time_fields:
+                date_time_str = getattr(row, field)
+                date_time = datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S') if date_time_str else None
+                row = row._replace(**{field: date_time})
 
             return row
 

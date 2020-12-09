@@ -169,7 +169,7 @@ evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / stateme
 # Set the output format. Available formats are text, parseable, colorized, json
 # and msvs (visual studio). You can also give a reporter class, e.g.
 # mypackage.mymodule.MyReporterClass.
-output-format=text
+output-format=colorized
 
 # Tells whether to display a full report or only the messages.
 reports=no
@@ -423,12 +423,7 @@ function-naming-style=snake_case
 #function-rgx=
 
 # Good variable names which should always be accepted, separated by a comma.
-good-names=i,
-           j,
-           k,
-           ex,
-           Run,
-           _
+good-names=i, j, k, e, t, _
 
 # Good variable names regexes, separated by a comma. If names match any regex,
 # they will always be accepted
