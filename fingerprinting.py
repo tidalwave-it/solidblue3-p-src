@@ -7,7 +7,7 @@
 #  __copyright__ = "Copyright © 2020 by Fabrizio Giudici"
 #  __credits__ = ["Fabrizio Giudici"]
 #  __license__ = "Apache v2"
-#  __version__ = "1.0-ALPHA-1"
+#  __version__ = "1.0-ALPHA-2-SNAPSHOT"
 #  __maintainer__ = "Fabrizio Giudici"
 #  __email__ = "fabrizio.giudici@tidalwave.it"
 #  __status__ = "Prototype"
