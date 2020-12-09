@@ -33,43 +33,51 @@ from utilities import *
 
 
 #
+# Base class for all dialogs.
+#
+class DialogSupport(QDialog):
+    def __init__(self, main_window: QMainWindow):
+        super(DialogSupport, self).__init__(main_window)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+
+
+#
 # The dialog box with the options for starting a file scan.
 #
-class OnlyNewFilesDialog(QDialog):
-    Options = namedtuple('Settings', 'only_new_files')
+class OnlyNewFilesDialog(DialogSupport):
+    Options = namedtuple('Options', 'only_new_files')
 
     def __init__(self, main_window: QMainWindow):
-        QDialog.__init__(self, main_window)
+        super().__init__(main_window)
         self.cb_only_new_files = QCheckBox(self)
         self.cb_only_new_files.setText('Only scan new files')
         self.cb_only_new_files.setChecked(True)
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
         layout = QVBoxLayout()
         layout.addWidget(self.cb_only_new_files)
-        layout.addWidget(button_box)
-        button_box.accepted.connect(self.accept)
+        layout.addWidget(self.button_box)
         self.setLayout(layout)
 
-    #
-    #
-    #
     def user_options(self):
         return OnlyNewFilesDialog.Options(only_new_files=self.cb_only_new_files.isChecked())
 
 
 #
+# The dialog box with the options for creating a new encrypted backup.
 #
-#
-class CreateBackupDialog(QDialog):
+class CreateBackupDialog(DialogSupport):
     Options = namedtuple('Options', 'label folders algorithm hash_algorithm burn')
     signal_populate = Signal()
 
     def __init__(self, main_window: QMainWindow):
-        QDialog.__init__(self, main_window)
+        super().__init__(main_window)
         self.le_label = QLineEdit()
         self.cb_do_not_burn = QCheckBox()
         self.cb_algorithm = QComboBox()
+        self.cb_algorithm.setModel(QStringListModel())
         self.cb_hash_algorithm = QComboBox()
+        self.cb_hash_algorithm.setModel(QStringListModel())
         self.cb_do_not_burn.setText('Only test, do not burn')
         le_label = self.le_label
 
@@ -113,26 +121,18 @@ class CreateBackupDialog(QDialog):
         self.lv_folders.setAcceptDrops(True)
         self.lv_folders.viewport().setAcceptDrops(True)
         self.lv_folders.setDropIndicatorShown(True)
-
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         layout = QVBoxLayout()
         layout.addWidget(self.le_label)
         layout.addWidget(self.lv_folders)
         layout.addWidget(self.cb_algorithm)
         layout.addWidget(self.cb_hash_algorithm)
         layout.addWidget(self.cb_do_not_burn)
-        layout.addWidget(button_box)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
+        layout.addWidget(self.button_box)
         self.setLayout(layout)
 
-        for algorithm in sorted(Config.veracrypt_algorithms().keys()):
-            self.cb_algorithm.addItem(algorithm)
-
-        for algorithm in sorted(Config.veracrypt_hash_algorithms().keys()):
-            self.cb_hash_algorithm.addItem(algorithm)
-
+        self.cb_algorithm.model().setStringList(sorted(Config.veracrypt_algorithms().keys()))
         self.cb_algorithm.setCurrentText(Config.veracrypt_default_algorithm())
+        self.cb_hash_algorithm.model().setStringList(sorted(Config.veracrypt_hash_algorithms().keys()))
         self.cb_hash_algorithm.setCurrentText(Config.veracrypt_default_hash_algorithm())
         self.resize(640, 480)
         self.signal_populate.connect(self.__slot_populate)
@@ -156,37 +156,34 @@ class CreateBackupDialog(QDialog):
 #
 # The dialog box with the options for selecting an unregistered backup volume.
 #
-class UnregisteredBackupDialog(QDialog):
+class UnregisteredBackupDialog(DialogSupport):
     Options = namedtuple('Options', 'base_path, label, eject_after_scan')
     signal_populate = Signal(object)
 
     def __init__(self, main_window: QMainWindow):
-        QDialog.__init__(self, main_window)
+        super().__init__(main_window)
         self.cb_volume_mount_point = QComboBox()
         self.cb_volume_mount_point.setEditable(False)
+        self.cb_volume_mount_point.setModel(QStringListModel())
         self.le_backup_name = QLineEdit()
         self.cb_eject_after_scan = QCheckBox()
         self.cb_eject_after_scan.setText('Eject after scan')
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         layout = QVBoxLayout()
         layout.addWidget(self.cb_volume_mount_point)
         layout.addWidget(self.le_backup_name)
         layout.addWidget(self.cb_eject_after_scan)
-        layout.addWidget(button_box)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
+        layout.addWidget(self.button_box)
         self.setLayout(layout)
         self.signal_populate.connect(self.__slot_populate)
-        self.mount_point = ''
 
-        def x(text):
+        def __on_mount_point_selected(text):
             nonlocal self
             self.mount_point, label, _ = utilities.extract(r'(.*) \((.*)\)', text)
             self.le_backup_name.setText(label)
 
-        self.cb_volume_mount_point.textActivated.connect(x)
+        self.cb_volume_mount_point.textActivated.connect(__on_mount_point_selected)
 
-    def user_options(self) -> namedtuple:
+    def user_options(self) -> Options:
         return UnregisteredBackupDialog.Options(base_path=self.mount_point,
                                                 label=self.le_backup_name.text(),
                                                 eject_after_scan=self.cb_eject_after_scan.isChecked())
@@ -194,38 +191,31 @@ class UnregisteredBackupDialog(QDialog):
     def __slot_populate(self, items):
         self.mount_point = ''
         self.le_backup_name.setText('')
-
-        while self.cb_volume_mount_point.count() > 0:
-            self.cb_volume_mount_point.removeItem(0)
-
-        for item in items:
-            self.cb_volume_mount_point.addItem(f'{item[0]} ({item[1]})')
+        self.cb_volume_mount_point.model().setStringList([f'{item[0]} ({item[1]})' for item in items])
 
 
 #
 # The dialog box with the options for selecting a registered backup volume.
 #
-class RegisteredBackupDialog(QDialog):
+class RegisteredBackupDialog(DialogSupport):
     Options = namedtuple('Options', 'base_path, label, eject_after_scan')
     signal_populate = Signal(object)
 
     def __init__(self, main_window: QMainWindow):
-        QDialog.__init__(self, main_window)
+        super().__init__(main_window)
         self.cb_volume_mount_point = QComboBox()
         self.cb_volume_mount_point.setEditable(False)
+        self.cb_volume_mount_point.setModel(QStringListModel())
         self.cb_eject_after_scan = QCheckBox()
         self.cb_eject_after_scan.setText('Eject after scan')
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         layout = QVBoxLayout()
         layout.addWidget(self.cb_volume_mount_point)
         layout.addWidget(self.cb_eject_after_scan)
-        layout.addWidget(button_box)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
+        layout.addWidget(self.button_box)
         self.setLayout(layout)
         self.signal_populate.connect(self.__slot_populate)
 
-    def user_options(self):
+    def user_options(self) -> Options:
         s = self.cb_volume_mount_point.currentText()
         volume_mount_point, label, _ = utilities.extract(r'^(.*) \(.*\)$', s)
         return RegisteredBackupDialog.Options(base_path=volume_mount_point,
@@ -233,11 +223,7 @@ class RegisteredBackupDialog(QDialog):
                                               eject_after_scan=self.cb_eject_after_scan.isChecked())
 
     def __slot_populate(self, items):
-        while self.cb_volume_mount_point.count() > 0:
-            self.cb_volume_mount_point.removeItem(0)
-
-        for item in items:
-            self.cb_volume_mount_point.addItem(f'{item[0]} ({item[1]})')
+        self.cb_volume_mount_point.model().setStringList([f'{item[0]} ({item[1]})' for item in items])
 
 
 #
