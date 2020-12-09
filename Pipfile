@@ -4,12 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pyside2 = "*"
-xattr = "*"
-pycobertura = "*"
-coverage = "*"
-pylint = "*"
-pyyaml = "*"
+pyside2 = "5.15.2"
+xattr = "0.9.7"
+pycobertura = "2.0.0"
+coverage = "5.3"
+pylint = "2.6.0"
+pyyaml = "5.3.1"
 
 [dev-packages]
 
