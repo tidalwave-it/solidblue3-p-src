@@ -16,6 +16,7 @@ import datetime
 import sys
 import threading
 import traceback
+from collections import namedtuple
 from pathlib import Path
 
 from PySide2.QtCore import *
