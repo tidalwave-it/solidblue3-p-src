@@ -18,6 +18,7 @@ import threading
 import traceback
 from collections import namedtuple
 from pathlib import Path
+from urllib.parse import urlparse
 
 from PySide2.QtCore import *
 from PySide2.QtGui import QIcon
@@ -61,16 +62,58 @@ class OnlyNewFilesDialog(QDialog):
 #
 class CreateBackupDialog(QDialog):
     Options = namedtuple('Options', 'label folders algorithm hash_algorithm burn')
+    signal_populate = Signal()
 
     def __init__(self, main_window: QMainWindow):
         QDialog.__init__(self, main_window)
         self.le_label = QLineEdit()
-        self.le_label.setText('FG-2019-0001,0002 #1')
         self.cb_do_not_burn = QCheckBox()
         self.cb_algorithm = QComboBox()
         self.cb_hash_algorithm = QComboBox()
         self.cb_do_not_burn.setText('Only test, do not burn')
+        le_label = self.le_label
+
+        class DropModel(QStringListModel):
+            def supportedDragActions(self):
+                return Qt.DropAction.CopyAction
+
+            # def supportedDropActions(self):
+            #    return Qt.DropAction.CopyAction
+
+            def flags(self, index: QModelIndex):
+                return Qt.ItemIsDropEnabled | super().flags(index)
+
+            def canDropMimeData(self, data: QMimeData, action, row, column, parent):
+                # print(f'asked can drop {data.formats()} {action}', flush=True)
+                return data.formats() == ['text/uri-list']  # and action == Qt.DropAction.CopyAction
+
+            def dropMimeData(self, data: QMimeData, action, row, column, parent):
+                if not self.canDropMimeData(data, action, row, column, parent):
+                    return False
+
+                folders = self.stringList()
+
+                for new_folder in data.text().split('\n'):
+                    if new_folder != '':
+                        path = urlparse(new_folder).path
+
+                        if Path(path).is_dir():
+                            folders += [path]
+
+                self.setStringList(sorted(folders))
+                backup_name_hint = FingerprintingControl.backup_name_hint(folders)
+
+                if backup_name_hint:
+                    le_label.setText(backup_name_hint)
+
+                return True
+
         self.lv_folders = QListView()
+        self.lv_folders.setModel(DropModel())
+        self.lv_folders.setAcceptDrops(True)
+        self.lv_folders.viewport().setAcceptDrops(True)
+        self.lv_folders.setDropIndicatorShown(True)
+
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         layout = QVBoxLayout()
         layout.addWidget(self.le_label)
@@ -91,6 +134,8 @@ class CreateBackupDialog(QDialog):
 
         self.cb_algorithm.setCurrentText(Config.veracrypt_default_algorithm())
         self.cb_hash_algorithm.setCurrentText(Config.veracrypt_default_hash_algorithm())
+        self.resize(640, 480)
+        self.signal_populate.connect(self.__slot_populate)
 
     def user_options(self) -> Options:
         algorithm = Config.veracrypt_algorithms()[self.cb_algorithm.currentText()]
@@ -98,11 +143,14 @@ class CreateBackupDialog(QDialog):
 
         return CreateBackupDialog.Options(
             label=self.le_label.text(),
-            folders=['/Volumes/Users/fritz/Personal/Photography/Photos/Digital/2019/FG-2019-0001',
-                     '/Volumes/Users/fritz/Personal/Photography/Photos/Digital/2019/FG-2019-0002'],
+            folders=sorted(self.lv_folders.model().stringList()),
             algorithm=algorithm,
             hash_algorithm=hash_algorithm,
             burn=not self.cb_do_not_burn.isChecked())
+
+    def __slot_populate(self):
+        self.le_label.setText('')
+        self.lv_folders.model().setStringList([])
 
 
 #
@@ -308,9 +356,10 @@ class Widgets(QObject):
         return self.show_dialog_and_wait(self.d_only_new_files)
 
     #
-    #
+    # Asks options for creating a new backup.
     #
     def ask_backup_options(self) -> CreateBackupDialog.Options:
+        self.d_create_backup_options.signal_populate.emit()
         return self.show_dialog_and_wait(self.d_create_backup_options)
 
     #
@@ -489,7 +538,7 @@ class FingerprintingPresentationAdapter(FingerprintingPresentation, AdapterSuppo
         pass
 
     def notify_file(self, path: str, is_new: bool):
-        path = self.__simplified(path)
+        path = shortened_path(path)
         self.widgets.signal_status.emit(path)
 
         if is_new:
@@ -498,18 +547,14 @@ class FingerprintingPresentationAdapter(FingerprintingPresentation, AdapterSuppo
             self.widgets.log(path)
 
     def notify_file_moved(self, old_path: str, new_path: str):
-        old_path = self.__simplified(old_path)
-        new_path = self.__simplified(new_path)
+        old_path = shortened_path(old_path)
+        new_path = shortened_path(new_path)
         self.widgets.log_to_console(f'{old_path}\n    ↳ {new_path}')
 
     def notify_error(self, message: str):
         message = html_red(message)
         self.widgets.log_red_to_console(message)
         self.widgets.signal_log_to_error_console.emit(message)
-
-    @staticmethod
-    def __simplified(path):
-        return path.replace(Config.home_folder(), '~')
 
     # TODO: push up, but if you do it doesn't work
     def notify_progress(self, partial: int, total: int):

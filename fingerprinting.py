@@ -765,6 +765,45 @@ class FingerprintingControl:
         return sorted(result)
 
     #
+    # Hints a name for a backup given the folders to use.
+    #
+    @staticmethod
+    def backup_name_hint(folders: [str]) -> str:
+        folders = sorted(folders)
+        names = [Path(folder).name for folder in folders]
+        lengths = [len(name) for name in names]
+
+        if max(lengths) != min(lengths):
+            return None
+
+        suffixes = [utilities.extract('^.*-([0-9]+)$', name)[0] for name in names]
+        lengths = [len(suffix) for suffix in suffixes]
+
+        if max(lengths) != min(lengths):
+            return None
+
+        numbers = [int(suffix) for suffix in suffixes]
+        first = min(numbers)
+        last = max(numbers)
+
+        if numbers != list(range(first, last + 1)):
+            return None
+
+        suffix_length = len(suffixes[0])
+        prefix_length = len(names[0]) - suffix_length
+        prefix = names[0][0:prefix_length]
+        first_str = str(first).zfill(suffix_length)
+        last_str = str(last).zfill(suffix_length)
+
+        if last == first:
+            return f'{prefix}{first_str}'
+
+        if last == first + 1:
+            return f'{prefix}{first_str},{last_str}'
+
+        return f'{prefix}{first_str} => {last_str}'
+
+    #
     # Execs a process and returns the exit code. Output is written to log file and to the console.
     # FIXME: duplicated in solidblue.
     #

@@ -17,6 +17,7 @@
 import unittest
 
 import utilities
+from fingerprinting import FingerprintingControl
 
 
 class TestUtilities(unittest.TestCase):
@@ -49,6 +50,30 @@ class TestUtilities(unittest.TestCase):
         self.assertEqual(utilities.format_bytes(1234567890123), '1.235 TB')
         self.assertEqual(utilities.format_bytes(12345678901234), '12.346 TB')
         self.assertEqual(utilities.format_bytes(123456789012345), '123.457 TB')
+
+    def test_backup_name_hint_provider1(self):
+        folders = ['/my/path/FG-2020-0003']
+        actual = FingerprintingControl.backup_name_hint(folders)
+        expected = 'FG-2020-0003'
+        self.assertEqual(expected, actual)
+
+    def test_backup_name_hint_provider2(self):
+        folders = ['/my/path/FG-2020-0003', '/my/path/FG-2020-0004']
+        actual = FingerprintingControl.backup_name_hint(folders)
+        expected = 'FG-2020-0003,0004'
+        self.assertEqual(expected, actual)
+
+    def test_backup_name_hint_provider3(self):
+        folders = ['/my/path/FG-2020-0009', '/my/path/FG-2020-0007', '/my/path/FG-2020-0008']
+        actual = FingerprintingControl.backup_name_hint(folders)
+        expected = 'FG-2020-0007 => 0009'
+        self.assertEqual(expected, actual)
+
+    def test_backup_name_hint_provider4(self):
+        folders = ['/my/path/FG-2020-0006', '/my/path/FG-2020-0004', '/my/path/FG-2020-0007']
+        actual = FingerprintingControl.backup_name_hint(folders)
+        expected = None
+        self.assertEqual(expected, actual)
 
 
 if __name__ == '__main__':

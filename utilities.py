@@ -123,3 +123,10 @@ def veracrypt_unmount_image(mount_point: str, logger_function=None):
 
     if return_code:
         raise RuntimeError(f'Veracrypt returned {return_code}')
+
+
+#
+#
+#
+def shortened_path(path: str) -> str:
+    return path.replace(os.getenv("HOME"), '~')
