@@ -876,7 +876,7 @@ class FingerprintingControl:
             label = files_in_base_path[0].replace('.veracrypt', '')
             veracrypt_mount_point = f'{veracrypt_mount_folder}/{label}'
             key_file = Config.encrypted_backup_key_file()
-            self.presentation.notify_message(f'Detected a Veracrypt backup, mounting image at "{veracrypt_mount_point}" ...')
+            self.presentation.notify_message(f'Detected a VeraCrypt backup, mounting image at "{veracrypt_mount_point}" ...')
             veracrypt_mount_image(f'{mount_point}/{files_in_base_path[0]}', veracrypt_mount_point, key_file, self.debug)
             return True, veracrypt_mount_point
 
@@ -897,7 +897,7 @@ class FingerprintingControl:
     #
     def __eventually_unmount_veracrypt_backup(self, veracrypt_backup: bool, mount_point: str):
         if veracrypt_backup:
-            self.presentation.notify_message(f'Unmounting veracrypt image at "{mount_point}" ...')
+            self.presentation.notify_message(f'Unmounting VeraCrypt image at "{mount_point}" ...')
             veracrypt_unmount_image(mount_point, self.debug)
 
     #
