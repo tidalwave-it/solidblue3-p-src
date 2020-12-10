@@ -804,7 +804,7 @@ class FingerprintingControl:
         return f'{prefix}{first_str} => {last_str}'
 
     #
-    # Execs a process and returns the exit code. Output is written to log file and to the console.
+    # Execs a process and returns the exit code.
     # FIXME: duplicated in solidblue.
     #
     def __execute(self, args, output_processor=None, fail_on_result_code: bool = False, log_cmdline: bool = True):
@@ -815,7 +815,7 @@ class FingerprintingControl:
             output_processor = __default_post_processor
 
         if log_cmdline:
-            self.presentation.notify_message(' '.join(args))
+            self.presentation.notify_message(utilities.html_italic(' '.join(args)))  # FIXME: should be notify_command()
         else:
             self.log(' '.join(args))
 

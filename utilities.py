@@ -55,6 +55,13 @@ def html_bold(text: str) -> str:
 
 
 #
+# Returns an HTML text in italic.
+#
+def html_italic(text: str) -> str:
+    return f'<em>{text}</em>'
+
+
+#
 # Format byte count in a human readable format.
 # See https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb
 #

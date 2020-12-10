@@ -701,14 +701,14 @@ class MainWindow(QWidget):
         self.__completion_notification("All volumes checked")
 
     #
-    # Execs a process and returns the exit code. Output is written to log file and to the console.
+    # Execs a process and returns the exit code.
     #
     def __execute(self, args, output_processor=None, fail_on_result_code: bool = False, log_cmdline: bool = True):
         if output_processor is None:
             output_processor = self.__default_post_processor
 
         if log_cmdline:
-            self.widgets.log_to_console(' '.join(args))
+            self.widgets.log_to_console(html_italic(' '.join(args)))
         else:
             self.log(' '.join(args))
 
