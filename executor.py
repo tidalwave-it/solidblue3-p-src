@@ -76,7 +76,7 @@ class Executor:
     # Execs a process and returns the exit code. Output is written to log file and to the console.
     #
     def execute(self, args, output_processor, fail_on_result_code: bool = False, charset: str = 'utf-8'):  # 'latin-1'
-        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
         self.process_output(process, output_processor, charset)
         self.log(f'>>>> subprocess terminated ({process.returncode})')
 
@@ -106,14 +106,12 @@ class Executor:
 
         while True:
             buffer = readable.read(1)
-            byte = 0
 
             if buffer:
                 byte = buffer[0]
-                byte = byte if byte != 8 else 13
-                line_buffer.append(byte)
+                line_buffer.append(byte if byte != 8 else 13)
 
-            if not buffer or byte == 13 or byte == 10:
+            if not buffer or line_buffer[-1] == 13 or line_buffer[-1] == 10:
                 try:
                     return line_buffer.decode(charset)
                 except BaseException as e:
