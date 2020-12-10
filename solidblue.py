@@ -99,17 +99,11 @@ class CreateBackupDialog(DialogSupport):
                 if not self.canDropMimeData(data, action, row, column, parent):
                     return False
 
-                folders = self.stringList()
-
-                for new_folder in data.text().split('\n'):
-                    if new_folder != '':
-                        path = urlparse(new_folder).path
-
-                        if Path(path).is_dir():
-                            folders += [path]
-
-                self.setStringList(sorted(folders))
-                backup_name_hint = FingerprintingControl.backup_name_hint(folders)
+                urls = filter(lambda url: url != '', data.text().split('\n'))
+                paths = [urlparse(url).path for url in urls]
+                folders = list(filter(lambda path: Path(path).is_dir(), paths))
+                self.setStringList(sorted(self.stringList() + folders))
+                backup_name_hint = FingerprintingControl.backup_name_hint(self.stringList())
 
                 if backup_name_hint:
                     le_label.setText(backup_name_hint)
