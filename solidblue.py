@@ -332,7 +332,7 @@ class Widgets(QObject):
     # Asks whether only new files should be scanned.
     # This method must be called by a background thread.
     #
-    def ask_only_new_files(self) -> namedtuple:
+    def ask_only_new_files(self) -> OnlyNewFilesDialog.Options:
         return self.show_dialog_and_wait(self.d_only_new_files)
 
     #
@@ -346,7 +346,7 @@ class Widgets(QObject):
     # Picks an unregistered backup volume and related options.
     # This method must be called by a background thread.
     #
-    def pick_unregistered_backup(self, values) -> namedtuple:
+    def pick_unregistered_backup(self, values) -> UnregisteredBackupDialog.Options:
         self.d_ask_unregistered_backup.signal_populate.emit(values)
         return self.show_dialog_and_wait(self.d_ask_unregistered_backup)
 
@@ -354,7 +354,7 @@ class Widgets(QObject):
     # Picks an registered backup volume and related options.
     # This method must be called by a background thread.
     #
-    def pick_registered_backup(self, values) -> namedtuple:
+    def pick_registered_backup(self, values) -> RegisteredBackupDialog.Options:
         self.d_ask_registered_backup.signal_populate.emit(values)
         return self.show_dialog_and_wait(self.d_ask_registered_backup)
 
