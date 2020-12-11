@@ -1,5 +1,5 @@
-!
 [![Build Status](https://img.shields.io/jenkins/s/http/services.tidalwave.it/ci/job/SolidBlue_III.svg)](http://services.tidalwave.it/ci/view/SolidBlue_III)
+[![Build Status](https://travis-ci.com/tidalwave/solidblue3-p-src.svg?branch=master)](https://travis-ci.com/tidalwave/solidblue3-p-src)
 [![Test Status](https://img.shields.io/jenkins/t/http/services.tidalwave.it/ci/job/SolidBlue_III.svg)](http://services.tidalwave.it/ci/view/SolidBlue_III)
 [![Coverage](https://img.shields.io/jenkins/c/http/services.tidalwave.it/ci/job/SolidBlue_III.svg)](http://services.tidalwave.it/ci/view/SolidBlue_III)
 
@@ -53,3 +53,4 @@ Additional Resources
 * [Tidalwave Homepage](http://tidalwave.it)
 * [Project Issue Tracker (Jira)](http://services.tidalwave.it/jira/browse/SLB3)
 * [Project Continuous Integration (Jenkins)](http://services.tidalwave.it/ci/view/SolidBlueIII)
+* [Project Continuous Integration (Travis)](https://travis-ci.com/bitbucket/tidalwave/solidblue3-p-src)

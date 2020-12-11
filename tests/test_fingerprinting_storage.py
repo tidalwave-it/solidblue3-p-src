@@ -136,7 +136,7 @@ COMMIT;
                             f'.exit')
 
         with open(f'{self.database_folder}/dump.sql', 'rt') as f:
-            actual = f.read()
+            actual = f.read().replace(' table ', ' "table" ')  # different dump in macOS and Linux (Travis)
 
         return actual
 

@@ -3,6 +3,10 @@ PIPENV="$(HOME)/.local/bin/pipenv"
 prepare:
 	python -m pip install --user pipenv
 
+prepare-travis:
+	python -m pip install pipenv
+	$(PIPENV) install
+
 clean:
 	rm -rf build __pycache__
 
