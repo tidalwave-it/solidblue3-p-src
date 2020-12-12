@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from executor import Executor
-from fingerprinting import FingerprintingControl, FingerprintingPresentation, FingerprintingStorageStats, FingerprintingStorage
+from fingerprinting import FingerprintingControl, FingerprintingPresentation, FingerprintingStats, FingerprintingFileSystem
 
 
 #
@@ -35,23 +35,54 @@ class MockProcess:
 #
 #
 class MockStorage:
+    def __init__(self, file_system):
+        self.files_map = file_system.files_map
+
+        self.paths_done = []
+        self.fingerprints_done = []
+
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
+    def find_mappings(self):
+        return self.files_map.items()
+
+    def add_path(self, file_id: str, path: str, commit=False):
+        self.paths_done += [('add_path()', file_id, path, commit)]
+
+    def update_path(self, file_id: str, path: str, commit=False):
+        self.paths_done += [('update_path()', file_id, path, commit)]
+
+    def add_fingerprint(self, file_id: str, file_name: str, algorithm: str, fingerprint: str, timestamp, commit=False):
+        self.fingerprints_done += [('insert_fingerprint()', file_id, algorithm, fingerprint, timestamp, commit)]
+
+    def things_done(self):
+        return self.paths_done + self.fingerprints_done
+
+
+#
+#
+#
+class MockFileSystem:
     def __init__(self):
         self.files_map = {}
         self.files = []
         self.fingerprints_map = {}
         self.attributes_map = {}
-        self.attributes_done = []
-        self.paths_done = []
-        self.fingerprints_done = []
 
-        class MockStorageStats(FingerprintingStorageStats):
+        self.attributes_done = []
+
+        class MockStats(FingerprintingStats):
             def stop(self):
                 self.processed_file_count = 4
                 self.plain_io_reads = 1234567894
                 self.mmap_reads = 359665044
                 self.elapsed = 59
 
-        self.stats = MockStorageStats()
+        self.stats = MockStats()
 
         def register_file(path: str, file_id: str = None, fingerprint: str = None, timestamp: datetime = None, timestamp_str: str = None):
             self.files += [path]
@@ -91,14 +122,17 @@ class MockStorage:
 
         self.files_map['00000000-0000-0000-0000-000000000004'] = 'oldfolder/file_moved'
 
-    def open(self):
-        pass
+    def enumerate_files(self, folders: [str], file_filter: str = '.*') -> [FingerprintingFileSystem.FileInfo]:
+        result = []
 
-    def close(self):
-        pass
+        for file in self.files:
+            file_info = FingerprintingFileSystem.FileInfo(name=str(Path(file).name),
+                                                          folder=str(Path(file).parent),
+                                                          path=file,
+                                                          size=0)
+            result += [file_info]
 
-    def find_mappings(self):
-        return self.files_map.items()
+        return result
 
     def get_attribute(self, path: str, name: str) -> str:
         key = (path, name)
@@ -107,36 +141,15 @@ class MockStorage:
     def set_attribute(self, path: str, name: str, value: str):
         self.attributes_done += [('set_attribute()', path, name, value)]
 
-    def add_path(self, file_id: str, path: str, commit=False):
-        self.paths_done += [('add_path()', file_id, path, commit)]
-
-    def update_path(self, file_id: str, path: str, commit=False):
-        self.paths_done += [('update_path()', file_id, path, commit)]
-
-    def add_fingerprint(self, file_id: str, file_name: str, algorithm: str, fingerprint: str, timestamp, commit=False):
-        self.fingerprints_done += [('insert_fingerprint()', file_id, algorithm, fingerprint, timestamp, commit)]
-
-    def enumerate_files(self, folders: [str], file_filter: str = '.*') -> [FingerprintingStorage.FileInfo]:
-        result = []
-
-        for file in self.files:
-            file_info = FingerprintingStorage.FileInfo(name=str(Path(file).name),
-                                                       folder=str(Path(file).parent),
-                                                       path=file,
-                                                       size=0)
-            result += [file_info]
-
-        return result
-
-    def things_done(self):
-        return self.paths_done + self.fingerprints_done + self.attributes_done
-
     @staticmethod
     def compute_fingerprint(path: str) -> (str, str):
         if 'with_error' in path:
             return 'error', 'I/O error'
         else:
             return 'md5', f'md5({path})'
+
+    def things_done(self):
+        return self.attributes_done
 
 
 #
@@ -185,7 +198,7 @@ class TestFingerprintControl(unittest.TestCase):
 
         self.under_test.scan(folder='folder', file_filter='.*')
 
-        actual = self.storage.things_done() + self.presentation.things_done
+        actual = self.storage.things_done() + self.file_system.things_done() + self.presentation.things_done
         new_timestamp = self.__mock_time_provider()
         new_timestamp_str = '2020-11-01 00:00:00'
         expected = [
@@ -198,6 +211,7 @@ class TestFingerprintControl(unittest.TestCase):
             ('insert_fingerprint()', '00000000-0000-0000-0000-000000000001', 'md5', 'md5(folder/file_with_unchanged_md5)', new_timestamp, True),
             ('insert_fingerprint()', '00000000-0000-0000-0000-000000001001', 'md5', 'md5(folder/new_file)', new_timestamp, True),
             ('insert_fingerprint()', '00000000-0000-0000-0000-000000001002', 'error', 'I/O error', new_timestamp, True),
+
             ('set_attribute()', 'folder/file_moved', 'it.tidalwave.datamanager.fingerprint.md5', 'md5(folder/file_moved)'),
             ('set_attribute()', 'folder/file_moved', 'it.tidalwave.datamanager.fingerprint.md5.timestamp', new_timestamp_str),
             ('set_attribute()', 'folder/file_with_changed_md5', 'it.tidalwave.datamanager.fingerprint.md5', 'md5(folder/file_with_changed_md5)'),
@@ -242,13 +256,14 @@ class TestFingerprintControl(unittest.TestCase):
 
         self.under_test.scan(folder='folder', file_filter='.*', only_new_files=True)
 
-        actual = self.storage.things_done() + self.presentation.things_done
+        actual = self.storage.things_done() + self.file_system.things_done() + self.presentation.things_done
         new_timestamp = self.__mock_time_provider()
         expected = [
             ('add_path()', '00000000-0000-0000-0000-000000001001', 'folder/new_file', True),
             ('add_path()', '00000000-0000-0000-0000-000000001002', 'folder/new_file_with_error', True),
             ('insert_fingerprint()', '00000000-0000-0000-0000-000000001001', 'md5', 'md5(folder/new_file)', new_timestamp, True),
             ('insert_fingerprint()', '00000000-0000-0000-0000-000000001002', 'error', 'I/O error', new_timestamp, True),
+
             ('set_attribute()', 'folder/new_file', 'it.tidalwave.datamanager.id', '00000000-0000-0000-0000-000000001001'),
             ('set_attribute()', 'folder/new_file', 'it.tidalwave.datamanager.fingerprint.md5', 'md5(folder/new_file)'),
             ('set_attribute()', 'folder/new_file', 'it.tidalwave.datamanager.fingerprint.md5.timestamp', '2020-11-01 00:00:00'),
@@ -1238,11 +1253,13 @@ class TestFingerprintControl(unittest.TestCase):
         self.next_id = 1000
         self.executor = Executor(log=self.__log, log_exception=self.__log_exception)
         self.presentation = MockPresentation()
-        self.storage = MockStorage()
+        self.file_system = MockFileSystem()
+        self.storage = MockStorage(file_system=self.file_system)
         self.under_test = FingerprintingControl(database_folder='folder',
                                                 executor=self.executor,
                                                 presentation=self.presentation,
                                                 storage=self.storage,
+                                                file_system=self.file_system,
                                                 id_generator=self.__mock_generate_id,
                                                 time_provider=self.__mock_time_provider,
                                                 debug_function=self.__debug)

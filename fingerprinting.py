@@ -39,37 +39,15 @@ CHARSET = 'utf-8'
 MMAP_THRESHOLD = 128 * 1024 * 1024
 
 
-class FingerprintingStorageStats:
-    def __init__(self):
-        self.processed_file_count = 0
-        self.plain_io_reads = 0
-        self.mmap_reads = 0
-        self.elapsed = 0
-        self.__start_time = 0
-
-    def reset(self):
-        self.processed_file_count = 0
-        self.plain_io_reads = 0
-        self.mmap_reads = 0
-        self.elapsed = 0
-        self.__start_time = time.time()
-
-    def stop(self):
-        self.elapsed = time.time() - self.__start_time
-
-
 #
 # Storage support for fingerprinting.
 #
 class FingerprintingStorage:
-    FileInfo = namedtuple("FileInfo", 'name, folder, path, size')
-
-    def __init__(self, database_folder: str, stats: FingerprintingStorageStats = None, id_generator=None, debug_function=None):
+    def __init__(self, database_folder: str, id_generator=None, debug_function=None):
         self.generate_id = id_generator if id_generator is not None else generate_id
         self.debug = debug_function
         self.database_file = f'{database_folder}/fingerprints.db'
         self.conn = None
-        self.stats = stats if stats else FingerprintingStorageStats()
 
     #
     # Destructor.
@@ -271,68 +249,6 @@ class FingerprintingStorage:
         return backup_item_id
 
     #
-    # Sets a single attribute.
-    #
-    @staticmethod
-    def set_attribute(path: str, name: str, value: str):
-        xattr.setxattr(path, name, value.encode(CHARSET))
-
-    #
-    # Get a single attribute.
-    #
-    @staticmethod
-    def get_attribute(path: str, name: str) -> str:
-        return xattr.getxattr(path, name).decode(CHARSET) if name in xattr.listxattr(path) else None
-
-    #
-    #
-    #
-    @staticmethod
-    def enumerate_files(folders: [str], file_filter: str = '.*') -> [FileInfo]:
-        result = []
-
-        for folder in folders:
-            for sub_folder, _, files in os.walk(folder, followlinks=True):
-                for file in files:
-                    if re.search(file_filter, file.lower()):
-                        path = f'{sub_folder}/{file}'
-                        file_info = FingerprintingStorage.FileInfo(file, sub_folder, path, os.stat(path).st_size)
-                        result += [file_info]
-
-        return result
-
-    #
-    # Computes a fingerprint; returns (algorithm, fingerprint) or (error, error_message).
-    #
-    def compute_fingerprint(self, path: str) -> (str, str):
-        try:
-            with open(path, 'rb') as file:
-                size = os.stat(path).st_size
-
-                if size < MMAP_THRESHOLD:  # Preliminary tests, plain I/O is 3x faster
-                    data = file.read()
-                    self.stats.plain_io_reads = self.stats.plain_io_reads + size
-                else:
-                    with mmap.mmap(file.fileno(), length=0, access=mmap.ACCESS_READ) as stream:
-                        data = stream.read()
-                        self.stats.mmap_reads = self.stats.mmap_reads + size
-
-                self.stats.processed_file_count = self.stats.processed_file_count + 1
-                return 'md5', hashlib.md5(data).hexdigest()
-        except OSError as e:
-            self.debug(f'While processing {path}: {e.strerror}')
-            return 'error', e.strerror
-
-    #
-    # Returns the volume UUID.
-    #
-    @staticmethod
-    def find_volume_uuid(mount_point: str) -> str:
-        process = subprocess.Popen(['diskutil', 'info', mount_point], text=True, stdout=subprocess.PIPE)
-        volume_id, _, _ = extract('.*Volume UUID: *([0-9A-F-]+)', str(process.stdout.readlines()))
-        return volume_id
-
-    #
     # Commits the current transaction.
     #
     def commit(self):
@@ -404,6 +320,104 @@ class FingerprintingStorage:
 
 
 #
+#
+#
+class FingerprintingStats:
+    def __init__(self):
+        self.processed_file_count = 0
+        self.plain_io_reads = 0
+        self.mmap_reads = 0
+        self.elapsed = 0
+        self.__start_time = 0
+
+    def reset(self):
+        self.processed_file_count = 0
+        self.plain_io_reads = 0
+        self.mmap_reads = 0
+        self.elapsed = 0
+        self.__start_time = time.time()
+
+    def stop(self):
+        self.elapsed = time.time() - self.__start_time
+
+
+#
+#
+#
+class FingerprintingFileSystem:
+    FileInfo = namedtuple("FileInfo", 'name, folder, path, size')
+
+    #
+    #
+    #
+    def __init__(self, stats: FingerprintingStats = None, debug_function=None):
+        self.stats = stats if stats else FingerprintingStats()
+        self.debug = debug_function
+
+    #
+    # Sets a single attribute.
+    #
+    @staticmethod
+    def set_attribute(path: str, name: str, value: str):
+        xattr.setxattr(path, name, value.encode(CHARSET))
+
+    #
+    # Get a single attribute.
+    #
+    @staticmethod
+    def get_attribute(path: str, name: str) -> str:
+        return xattr.getxattr(path, name).decode(CHARSET) if name in xattr.listxattr(path) else None
+
+    #
+    # Returns a list of files in the given folder (recursively inspected), matching the given filter.
+    #
+    @staticmethod
+    def enumerate_files(folders: [str], file_filter: str = '.*') -> [FileInfo]:
+        result = []
+
+        for folder in folders:
+            for sub_folder, _, files in os.walk(folder, followlinks=True):
+                for file in files:
+                    if re.search(file_filter, file.lower()):
+                        path = f'{sub_folder}/{file}'
+                        file_info = FingerprintingFileSystem.FileInfo(file, sub_folder, path, os.stat(path).st_size)
+                        result += [file_info]
+
+        return result
+
+    #
+    # Computes a fingerprint; returns (algorithm, fingerprint) or (error, error_message).
+    #
+    def compute_fingerprint(self, path: str) -> (str, str):
+        try:
+            with open(path, 'rb') as file:
+                size = os.stat(path).st_size
+
+                if size < MMAP_THRESHOLD:  # Preliminary tests, plain I/O is 3x faster
+                    data = file.read()
+                    self.stats.plain_io_reads = self.stats.plain_io_reads + size
+                else:
+                    with mmap.mmap(file.fileno(), length=0, access=mmap.ACCESS_READ) as stream:
+                        data = stream.read()
+                        self.stats.mmap_reads = self.stats.mmap_reads + size
+
+                self.stats.processed_file_count = self.stats.processed_file_count + 1
+                return 'md5', hashlib.md5(data).hexdigest()
+        except OSError as e:
+            self.debug(f'While processing {path}: {e.strerror}')
+            return 'error', e.strerror
+
+    #
+    # Returns the volume UUID.
+    #
+    @staticmethod
+    def find_volume_uuid(mount_point: str) -> str:
+        process = subprocess.Popen(['diskutil', 'info', mount_point], text=True, stdout=subprocess.PIPE)
+        volume_id, _, _ = extract('.*Volume UUID: *([0-9A-F-]+)', str(process.stdout.readlines()))
+        return volume_id
+
+
+#
 # Presentation.
 #
 class FingerprintingPresentation:
@@ -444,6 +458,7 @@ class FingerprintingControl:
                  executor: Executor,
                  presentation: FingerprintingPresentation,
                  storage: FingerprintingStorage = None,
+                 file_system: FingerprintingFileSystem = None,
                  time_provider=None,
                  id_generator=None,
                  log=None,
@@ -455,6 +470,7 @@ class FingerprintingControl:
         self.storage = storage if storage is not None else FingerprintingStorage(database_folder=database_folder,
                                                                                  id_generator=self.generate_id,
                                                                                  debug_function=debug_function)
+        self.file_system = file_system if file_system else FingerprintingFileSystem(debug_function=debug_function)
         self.log = log
         self.debug = debug_function
 
@@ -462,7 +478,7 @@ class FingerprintingControl:
     # Scans files.
     #
     def scan(self, folder: str, file_filter: str, only_new_files=False):
-        stats = self.storage.stats
+        stats = self.file_system.stats
 
         try:
             stats.reset()
@@ -484,7 +500,7 @@ class FingerprintingControl:
 
                 if file_id is None:
                     file_id = self.generate_id()
-                    self.storage.set_attribute(path, XATTR_ID, file_id)
+                    self.file_system.set_attribute(path, XATTR_ID, file_id)
                     self.storage.add_path(file_id, path, commit=True)
                 else:
                     if only_new_files:
@@ -499,14 +515,14 @@ class FingerprintingControl:
                         self.presentation.notify_file_moved(prev_path, path)
                         self.storage.update_path(file_id, path, commit=True)
 
-                algorithm, new_fingerprint = self.storage.compute_fingerprint(path)
+                algorithm, new_fingerprint = self.file_system.compute_fingerprint(path)
                 self.storage.add_fingerprint(file_id, file_name, algorithm, new_fingerprint, new_timestamp, commit=True)
 
                 if algorithm == 'error':
                     self.presentation.notify_error(f'Error for {path}: {new_fingerprint}')
                 else:
-                    self.storage.set_attribute(path, XATTR_FINGERPRINT, new_fingerprint)
-                    self.storage.set_attribute(path, XATTR_FINGERPRINT_TIMESTAMP, new_timestamp_str)
+                    self.file_system.set_attribute(path, XATTR_FINGERPRINT, new_fingerprint)
+                    self.file_system.set_attribute(path, XATTR_FINGERPRINT_TIMESTAMP, new_timestamp_str)
                     self.presentation.notify_file(path, is_new=fingerprint is None)
 
                     if fingerprint is not None and new_fingerprint != fingerprint:
@@ -534,7 +550,7 @@ class FingerprintingControl:
 
         try:
             self.storage.open()
-            volume_id = self.storage.find_volume_uuid(mount_point)  # Beware: of the container volume!
+            volume_id = self.file_system.find_volume_uuid(mount_point)  # Beware: of the container volume!
             assert volume_id
             creation_date = datetime.datetime.fromtimestamp(os.stat(actual_mount_point).st_ctime)
             self.presentation.notify_message(f'Volume UUID {volume_id} created on {creation_date}')
@@ -586,7 +602,7 @@ class FingerprintingControl:
 
         try:
             self.storage.open()
-            current_volume_id = self.storage.find_volume_uuid(mount_point)  # Beware: of the container volume!
+            current_volume_id = self.file_system.find_volume_uuid(mount_point)  # Beware: of the container volume!
             assert current_volume_id
             backup = self.storage.find_backup_by_volume_id(current_volume_id)
 
@@ -604,7 +620,7 @@ class FingerprintingControl:
                 if file_id:
                     self.presentation.notify_file(file_relative_path, is_new=False)
                     original_fingerprint, _ = self.storage.find_latest_fingerprint_by_id(file_id)
-                    algorithm, fingerprint = self.storage.compute_fingerprint(backup_file.path)
+                    algorithm, fingerprint = self.file_system.compute_fingerprint(backup_file.path)
                     backup_item_id = self.storage.find_backup_item_id(backup.id, file_id)
 
                     if not backup_item_id:
@@ -638,7 +654,7 @@ class FingerprintingControl:
                                 hash_algorithm: str,
                                 folders: [str],
                                 burn: bool):
-        DVD_RAW_SIZE = 8543666176
+        # DVD_RAW_SIZE = 8543666176
         backup_label = backup_name
 
         working_folder = Config.working_folder()
@@ -751,7 +767,7 @@ class FingerprintingControl:
 
         for volume_name in volume_names:
             mount_point = f'/Volumes/{volume_name}'
-            volume_id = self.storage.find_volume_uuid(mount_point)
+            volume_id = self.file_system.find_volume_uuid(mount_point)
             backup = self.storage.find_backup_by_volume_id(volume_id) if volume_id else None
 
             if backup and registered:
@@ -883,10 +899,10 @@ class FingerprintingControl:
     #
     #
     #
-    def __count_files(self, folders: [str], file_filter: str = '.*') -> [FingerprintingStorage.FileInfo]:
+    def __count_files(self, folders: [str], file_filter: str = '.*') -> [FingerprintingFileSystem.FileInfo]:
         self.presentation.notify_counting()
         self.presentation.notify_message(f'Counting files in {folders}...')
-        files = self.storage.enumerate_files(folders, file_filter)
+        files = self.file_system.enumerate_files(folders, file_filter)
         files = sorted(files, key=lambda file: file.path)
         self.presentation.notify_file_count(len(files))
         self.presentation.notify_message(utilities.file_enumeration_message(files))
@@ -904,7 +920,7 @@ class FingerprintingControl:
     #
     #
     def __find_file_id(self, path: str) -> str:
-        file_id = self.storage.get_attribute(path, XATTR_ID)
+        file_id = self.file_system.get_attribute(path, XATTR_ID)
 
         if not file_id:
             file_name = Path(path).name
@@ -928,9 +944,9 @@ class FingerprintingControl:
     # Gets (file_id, fingerprint, timestamp) attributes for the given path.
     #
     def __get_attributes(self, path: str) -> (str, str, int):
-        file_id = self.storage.get_attribute(path, XATTR_ID)
-        fingerprint = self.storage.get_attribute(path, XATTR_FINGERPRINT)
-        timestamp = self.storage.get_attribute(path, XATTR_FINGERPRINT_TIMESTAMP)
+        file_id = self.file_system.get_attribute(path, XATTR_ID)
+        fingerprint = self.file_system.get_attribute(path, XATTR_FINGERPRINT)
+        timestamp = self.file_system.get_attribute(path, XATTR_FINGERPRINT_TIMESTAMP)
         self.debug(f'__get_attributes({path}): {file_id}, {fingerprint}, {timestamp}')
 
         return file_id, fingerprint, timestamp
