@@ -112,7 +112,7 @@ class FingerprintingStorage:
     #
     # Returns the (id, path) mappings.
     #
-    def find_mappings(self):
+    def find_mappings(self) -> [(str, str)]:
         return self.__query('SELECT id, path FROM files ORDER BY path', (), commit=True)
 
     #
@@ -130,7 +130,7 @@ class FingerprintingStorage:
     #
     #
     #
-    def find_file_id_by_name(self, file_name):
+    def find_file_id_by_name(self, file_name) -> str:
         rows = self.__query('SELECT id FROM files WHERE path LIKE ?', (f'%/{file_name}',))
         return rows[0][0] if len(rows) == 1 else None
         # FIXME: len(rows) > 1 should raise an exception
@@ -167,7 +167,8 @@ class FingerprintingStorage:
     #
     # Adds a backup. Returns the backup id.
     #
-    def add_backup(self, base_path: str, label: str, volume_id: str, creation_date: datetime, registration_date: datetime, encrypted, commit=False) -> str:
+    def add_backup(self, base_path: str, label: str, volume_id: str, creation_date: datetime.datetime, registration_date: datetime.datetime, encrypted,
+                   commit=False) -> str:
         backup_id = self.generate_id()
         t = (backup_id, base_path, label, volume_id, creation_date, registration_date, encrypted)
         self.__update('INSERT INTO backups(id, base_path, label, volume_id, creation_date, registration_date, encrypted) VALUES(?, ?, ?, ?, ?, ? ,?)', t,
@@ -416,6 +417,115 @@ class FingerprintingFileSystem:
         volume_id, _, _ = extract('.*Volume UUID: *([0-9A-F-]+)', str(process.stdout.readlines()))
         return volume_id
 
+    #
+    # Ejects an optical disk mounted at the specified point.
+    #
+    @staticmethod
+    def eject_optical_disc(mount_point: str):
+        utilities.eject_optical_disc(mount_point)
+
+    #
+    # Create a directory and all its parents.
+    #
+    @staticmethod
+    def make_dirs(veracrypt_mount_folder):
+        os.makedirs(veracrypt_mount_folder, exist_ok=True)
+
+    #
+    #
+    #
+    @staticmethod
+    def remove_folder(folder: str):
+        if Path(folder).exists():
+            shutil.rmtree(folder)
+
+    #
+    # Returns the creation date of the given file.
+    #
+    @staticmethod
+    def creation_date(path: str) -> datetime.datetime:
+        return datetime.datetime.fromtimestamp(os.stat(path).st_ctime)
+
+    #
+    #
+    #
+    @staticmethod
+    def copy_with_xattrs(source_path: str, target_path: str, executor):
+        # Can't use shutils.copy*() because they don't preserve extended attributes
+        executor(['cp', '-p', source_path, target_path], log_cmdline=False, fail_on_result_code=True)
+
+    #
+    #
+    #
+    @staticmethod
+    def create_veracrypt_image(algorithm: str, hash_algorithm: str, key_file: str, size: int, image_file: str, executor, veracrypt_post_processor):
+        executor([utilities.VERACRYPT,
+                  '--text',
+                  '--non-interactive',
+                  '--create',
+                  image_file,
+                  '--volume-type=normal',
+                  f'--size={size}',
+                  f'--encryption={algorithm}',
+                  f'--hash={hash_algorithm}',
+                  '--filesystem=hfs',
+                  '--keyfiles',
+                  key_file,
+                  '--quick',
+                  '--random-source=/dev/urandom'],
+                 veracrypt_post_processor,
+                 fail_on_result_code=True)
+
+    #
+    #
+    #
+    @staticmethod
+    def create_hybrid_disk_image(label: str, image_file: str, source_folder: str, executor):
+        # -hfs because we don't know how to retrieve an unique id for -udf or -joliet.
+        executor(['hdiutil', 'makehybrid', '-o', image_file, source_folder, '-ov', '-hfs', '-default-volume-name', label],
+                 fail_on_result_code=True)
+
+    #
+    #
+    #
+    @staticmethod
+    def burn(image_file: str, post_processor, executor):
+        # It seems it's impossible to prevent drutil from ejecting the media.
+        executor(['drutil', 'burn', '-noverify', '-speed', '6', image_file], output_processor=post_processor, fail_on_result_code=True)
+
+    #
+    #
+    #
+    def mount_veracrypt_image(self, image_file: str, mount_point: str, key_file: str):
+        veracrypt_mount_image(image_file, mount_point, key_file, self.debug)
+
+    #
+    #
+    #
+    def unmount_veracrypt_image(self, mount_point: str):
+        veracrypt_unmount_image(mount_point, self.debug)
+
+    #
+    #
+    #
+    @staticmethod
+    def unmount_optical_disk(mount_point: str, executor):
+        executor(['hdiutil', 'detach', mount_point], fail_on_result_code=True)
+
+    #
+    #
+    #
+    @staticmethod
+    def size(file: str) -> int:
+        return os.stat(file).st_size
+
+    #
+    #
+    #
+    @staticmethod
+    def exists(file: str) -> bool:
+        return os.path.exists(file)
+
 
 #
 # Presentation.
@@ -552,7 +662,7 @@ class FingerprintingControl:
             self.storage.open()
             volume_id = self.file_system.find_volume_uuid(mount_point)  # Beware: of the container volume!
             assert volume_id
-            creation_date = datetime.datetime.fromtimestamp(os.stat(actual_mount_point).st_ctime)
+            creation_date = self.file_system.creation_date(actual_mount_point)
             self.presentation.notify_message(f'Volume UUID {volume_id} created on {creation_date}')
 
             if self.storage.find_backup_by_volume_id(volume_id):
@@ -588,7 +698,7 @@ class FingerprintingControl:
             self.storage.commit()
 
             if eject_after:
-                utilities.eject_optical_disc(mount_point)
+                self.file_system.eject_optical_disc(mount_point)
         finally:
             self.storage.close()
             self.__eventually_unmount_veracrypt_backup(veracrypt_backup, actual_mount_point)
@@ -640,7 +750,7 @@ class FingerprintingControl:
             self.storage.commit()
 
             if eject_after:
-                utilities.eject_optical_disc(mount_point)
+                self.file_system.eject_optical_disc(mount_point)
         finally:
             self.storage.close()
             self.__eventually_unmount_veracrypt_backup(veracrypt_backup, actual_mount_point)
@@ -673,34 +783,16 @@ class FingerprintingControl:
             # TODO: check size
 
             self.presentation.notify_message(f'Cleaning up working area ({working_folder})...')
+            self.file_system.remove_folder(working_folder)
 
-            if Path(working_folder).exists():
-                shutil.rmtree(working_folder)
-
-            os.makedirs(veracrypt_image_folder, exist_ok=True)
-
-            self.__execute([utilities.VERACRYPT,
-                            '--text',
-                            '--non-interactive',
-                            '--create',
-                            veracrypt_image_file,
-                            '--volume-type=normal',
-                            f'--size={size}',
-                            f'--encryption={algorithm}',
-                            f'--hash={hash_algorithm}',
-                            '--filesystem=hfs',
-                            '--keyfiles',
-                            key_file,
-                            '--quick',
-                            '--random-source=/dev/urandom'],
-                           self.veracrypt_post_processor,
-                           fail_on_result_code=True)
-
-            veracrypt_image_size = os.stat(veracrypt_image_file).st_size
+            self.file_system.make_dirs(veracrypt_image_folder)
+            self.file_system.create_veracrypt_image(algorithm, hash_algorithm, key_file, size, veracrypt_image_file, self.__execute,
+                                                    self.veracrypt_post_processor)
+            veracrypt_image_size = self.file_system.size(veracrypt_image_file)
             self.presentation.notify_message(f'Veracrypt image size is {format_bytes(veracrypt_image_size)}')
 
             self.presentation.notify_message('Mounting encrypted image...')
-            veracrypt_mount_image(veracrypt_image_file, veracrypt_mount_point, key_file, self.log)
+            self.file_system.mount_veracrypt_image(veracrypt_image_file, veracrypt_mount_point, key_file)
 
             self.presentation.notify_message('Copying files...')
             self.presentation.notify_secondary_progress(0)
@@ -715,45 +807,37 @@ class FingerprintingControl:
 
                 assert parent is not None
                 target_folder = f'{veracrypt_mount_point}/{parent}'
-                os.makedirs(target_folder, exist_ok=True)
+                self.file_system.make_dirs(target_folder)
                 self.presentation.notify_file(file.name, is_new=False)
-                # Can't use shutils.copy*() because they don't preserve extended attributes
-                self.__execute(['cp', '-p', file.path, f'{target_folder}/{file.name}'], log_cmdline=False, fail_on_result_code=True)
+                self.file_system.copy_with_xattrs(file.path, f'{target_folder}/{file.name}', self.__execute)
                 self.presentation.notify_secondary_progress(sub_progress / len(files_to_backup))
 
             self.presentation.notify_message('Unmounting encrypted image...')
-            veracrypt_unmount_image(veracrypt_mount_point, self.log)
-
+            self.file_system.unmount_veracrypt_image(veracrypt_mount_point)
             # self.widgets.signal_status.emit('')
-            # -hfs because we don't know how to retrieve an unique id for -udf or -joliet.
-            self.__execute(['hdiutil', 'makehybrid', '-o', opt_image_file, veracrypt_image_folder,
-                            '-ov', '-hfs', '-default-volume-name', backup_label], fail_on_result_code=True)
-
-            opt_image_size = os.stat(opt_image_file_with_ext).st_size
+            self.file_system.create_hybrid_disk_image(backup_label, opt_image_file, veracrypt_image_folder, self.__execute)
+            opt_image_size = self.file_system.size(opt_image_file_with_ext)
             self.presentation.notify_message(f'Burn image size is {format_bytes(opt_image_size)}')
 
             if burn:
                 optical_mount_point = f'/Volumes/{backup_name}'
+                self.file_system.burn(opt_image_file_with_ext, self.drutil_post_processor, self.__execute)
 
-                # It seems it's impossible to prevent drutil from ejecting the media.
-                self.__execute(['drutil', 'burn', '-noverify', '-speed', '6', opt_image_file_with_ext],
-                               output_processor=self.drutil_post_processor, fail_on_result_code=True)
-
-                while not os.path.exists(optical_mount_point):
+                while not self.file_system.exists(optical_mount_point):
                     self.presentation.notify_message('Optical disk not mounted, please close the tray.')
                     # TODO utilities.inject_optical_disc()
                     time.sleep(5)
 
                 self.register_backup(label=backup_label, mount_point=optical_mount_point)
                 self.check_backup(optical_mount_point)
-                self.__execute(['hdiutil', 'detach', optical_mount_point], fail_on_result_code=True)
-                utilities.eject_optical_disc(optical_mount_point)
+                self.file_system.unmount_optical_disk(optical_mount_point, self.__execute)
+                self.file_system.eject_optical_disc(optical_mount_point)
         except BaseException as e:
             self.presentation.notify_error(f'ERROR: Procedure failed: {e}')
         finally:
             if burn:
                 self.presentation.notify_message(f'Cleaning up working area ({working_folder})...')
-                shutil.rmtree(working_folder)
+                self.file_system.remove_folder(working_folder)
                 # FIXME: what if the verification fails? The backup should be removed.
 
     #
@@ -842,7 +926,7 @@ class FingerprintingControl:
     #
     def veracrypt_post_processor(self, string: str):
         string = string.strip()
-        progress, speed, left = extract('Done: *([0-9.]+)% *Speed: *([0-9].+) *MiB/s *Left: *([0-9]+) *(s|minutes)', string)
+        progress, _, _ = extract('Done: *([0-9.]+)% *Speed: *([0-9].+) *MiB/s *Left: *([0-9]+) *(s|minutes)', string)
         spurious, _, _ = extract('Done: *([0-9.-]+)% *Speed: *Left:$', string)
 
         if not spurious:
@@ -881,20 +965,20 @@ class FingerprintingControl:
     # Check whether this is a Veracrypt backup. If it is, mount the encrypted volume and returns the new mount point.
     #
     def __check_veracrypt_backup(self, mount_point: str) -> (bool, str):
-        files_in_base_path = os.listdir(mount_point)
-        veracrypt_backup = len(files_in_base_path) == 1 and files_in_base_path[0].endswith('.veracrypt')
+        files_in_volume_root = [file.name for file in self.file_system.enumerate_files([mount_point])]
+        veracrypt_backup = len(files_in_volume_root) == 1 and files_in_volume_root[0].endswith('.veracrypt')
 
         if not veracrypt_backup:
             return False, mount_point
-        else:
-            veracrypt_mount_folder = Config.encrypted_volumes_mount_folder()
-            os.makedirs(veracrypt_mount_folder, exist_ok=True)
-            label = files_in_base_path[0].replace('.veracrypt', '')
-            veracrypt_mount_point = f'{veracrypt_mount_folder}/{label}'
-            key_file = Config.encrypted_backup_key_file()
-            self.presentation.notify_message(f'Detected a VeraCrypt backup, mounting image at "{veracrypt_mount_point}" ...')
-            veracrypt_mount_image(f'{mount_point}/{files_in_base_path[0]}', veracrypt_mount_point, key_file, self.debug)
-            return True, veracrypt_mount_point
+
+        veracrypt_mount_folder = Config.encrypted_volumes_mount_folder()
+        self.file_system.make_dirs(veracrypt_mount_folder)
+        label = files_in_volume_root[0].replace('.veracrypt', '')
+        veracrypt_mount_point = f'{veracrypt_mount_folder}/{label}'
+        key_file = Config.encrypted_backup_key_file()
+        self.presentation.notify_message(f'Detected a VeraCrypt backup, mounting image at "{veracrypt_mount_point}" ...')
+        self.file_system.mount_veracrypt_image(f'{mount_point}/{files_in_volume_root[0]}', veracrypt_mount_point, key_file)
+        return True, veracrypt_mount_point
 
     #
     #
@@ -914,7 +998,7 @@ class FingerprintingControl:
     def __eventually_unmount_veracrypt_backup(self, veracrypt_backup: bool, mount_point: str):
         if veracrypt_backup:
             self.presentation.notify_message(f'Unmounting VeraCrypt image at "{mount_point}" ...')
-            veracrypt_unmount_image(mount_point, self.debug)
+            self.file_system.unmount_veracrypt_image(mount_point)
 
     #
     #

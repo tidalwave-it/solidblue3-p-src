@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "62b81b4b5272038d0e3460755bb60fe263266b43b1389ddd5b4b93ce1c6165b9"
+            "sha256": "bd5a5e592cf082e26c7cf119f72ee297114408fd2dcd772ebeb690f7d19719f0"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -252,6 +252,13 @@
                 "sha256:dd8d182285a0fe56bace7f45b5e7d1a6ebcbf524e8f3bd87eb0f125271b8831f"
             ],
             "version": "==0.6.1"
+        },
+        "mockito": {
+            "hashes": [
+                "sha256:d6b3aca6cdb92bbd47e19ebdb1a0b84ef23ab874eae5c6d505323c8657257c06"
+            ],
+            "index": "pypi",
+            "version": "==1.2.2"
         },
         "pycobertura": {
             "hashes": [
