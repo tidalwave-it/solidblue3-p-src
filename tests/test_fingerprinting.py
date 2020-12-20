@@ -278,24 +278,30 @@ class TestFingerprintControl(unittest.TestCase):
                                    file_id='00000000-0000-0000-0000-000000000001',
                                    fingerprint='md5(folder/file_with_unchanged_md5)',
                                    timestamp=old_timestamp,
-                                   timestamp_str=old_timestamp_str)
+                                   timestamp_str=old_timestamp_str,
+                                   size=56948594)
         self.file_system.mock_file(path='folder/file_with_changed_md5',
                                    file_id='00000000-0000-0000-0000-000000000002',
                                    fingerprint='oldmd5(folder/file_with_changed_md5)',
                                    timestamp=old_timestamp,
-                                   timestamp_str=old_timestamp_str)
+                                   timestamp_str=old_timestamp_str,
+                                   size=75876784)
         self.file_system.mock_file(path='folder/file_with_error',
                                    file_id='00000000-0000-0000-0000-000000000003',
                                    fingerprint='md5(folder/file_with_error)',
                                    timestamp=old_timestamp,
-                                   timestamp_str=old_timestamp_str)
+                                   timestamp_str=old_timestamp_str,
+                                   size=2342342)
         self.file_system.mock_file(path='folder/file_moved',
                                    file_id='00000000-0000-0000-0000-000000000004',
                                    fingerprint='md5(folder/file_moved)',
                                    timestamp=old_timestamp,
-                                   timestamp_str=old_timestamp_str)
-        self.file_system.mock_file(path='folder/new_file')
-        self.file_system.mock_file(path='folder/new_file_with_error')
+                                   timestamp_str=old_timestamp_str,
+                                   size=1696838)
+        self.file_system.mock_file(path='folder/new_file',
+                                   size=6426694)
+        self.file_system.mock_file(path='folder/new_file_with_error',
+                                   size=13346039)
 
         self.file_system.paths_dict_by_id['00000000-0000-0000-0000-000000000004'] = 'oldfolder/file_moved'
 
@@ -340,22 +346,22 @@ class TestFingerprintControl(unittest.TestCase):
             ('notify_counting()',),
             ('notify_message()', "Counting files in ['folder']..."),
             ('notify_file_count()', 6),
-            ('notify_message()', 'Found 6 files (0 bytes)'),
+            ('notify_message()', 'Found 6 files (156.6 MB)'),
             ('notify_file_moved()', 'oldfolder/file_moved', 'folder/file_moved'),
             ('notify_file()', 'folder/file_moved', False),
-            ('notify_progress()', 1, 6),
+            ('notify_progress()', 1696838, 156637291),
             ('notify_file()', 'folder/file_with_changed_md5', False),
             ('notify_error()', 'Mismatch for folder/file_with_changed_md5: found md5(folder/file_with_changed_md5) '
                                'expected oldmd5(folder/file_with_changed_md5)'),
-            ('notify_progress()', 2, 6),
+            ('notify_progress()', 77573622, 156637291),
             ('notify_error()', 'Error for folder/file_with_error: I/O error'),
-            ('notify_progress()', 3, 6),
+            ('notify_progress()', 79915964, 156637291),
             ('notify_file()', 'folder/file_with_unchanged_md5', False),
-            ('notify_progress()', 4, 6),
+            ('notify_progress()', 136864558, 156637291),
             ('notify_file()', 'folder/new_file', True),
-            ('notify_progress()', 5, 6),
+            ('notify_progress()', 143291252, 156637291),
             ('notify_error()', 'Error for folder/new_file_with_error: I/O error'),
-            ('notify_progress()', 6, 6),
+            ('notify_progress()', 156637291, 156637291),
             ('notify_message()', '4 files (1.59 GB) processed in 59 seconds (27.0 MB/sec)'),
             ('notify_message()', '1.23 GB in plain I/O, 359.7 MB in memory mapped I/O')
         ]
@@ -391,20 +397,20 @@ class TestFingerprintControl(unittest.TestCase):
             ('notify_counting()',),
             ('notify_message()', "Counting files in ['folder']..."),
             ('notify_file_count()', 6),
-            ('notify_message()', 'Found 6 files (0 bytes)'),
+            ('notify_message()', 'Found 6 files (156.6 MB)'),
             ('notify_message()', 'Scanning only new files'),
             ('notify_file()', 'folder/file_moved', False),
-            ('notify_progress()', 1, 6),
+            ('notify_progress()', 1696838, 156637291),
             ('notify_file()', 'folder/file_with_changed_md5', False),
-            ('notify_progress()', 2, 6),
+            ('notify_progress()', 77573622, 156637291),
             ('notify_file()', 'folder/file_with_error', False),
-            ('notify_progress()', 3, 6),
+            ('notify_progress()', 79915964, 156637291),
             ('notify_file()', 'folder/file_with_unchanged_md5', False),
-            ('notify_progress()', 4, 6),
+            ('notify_progress()', 136864558, 156637291),
             ('notify_file()', 'folder/new_file', True),
-            ('notify_progress()', 5, 6),
+            ('notify_progress()', 143291252, 156637291),
             ('notify_error()', 'Error for folder/new_file_with_error: I/O error'),
-            ('notify_progress()', 6, 6),
+            ('notify_progress()', 156637291, 156637291),
             ('notify_message()', '4 files (1.59 GB) processed in 59 seconds (27.0 MB/sec)'),
             ('notify_message()', '1.23 GB in plain I/O, 359.7 MB in memory mapped I/O')
         ]
@@ -620,17 +626,17 @@ class TestFingerprintControl(unittest.TestCase):
             ('notify_file_count()', 6),
             ('notify_message()', 'Found 6 files (434.3 MB)'),
             ('notify_file()', 'Folder1/File1', False),
-            ('notify_progress()', 1, 6),
+            ('notify_progress()', 234235545, 434286018),
             ('notify_file()', 'Folder1/File2', False),
-            ('notify_progress()', 2, 6),
+            ('notify_progress()', 278469799, 434286018),
             ('notify_file()', 'Folder2/File3', False),
-            ('notify_progress()', 3, 6),
+            ('notify_progress()', 358828294, 434286018),
             ('notify_file()', 'Folder2/File4', False),
-            ('notify_progress()', 4, 6),
+            ('notify_progress()', 364667852, 434286018),
             ('notify_file()', 'Folder3/File5', False),
-            ('notify_progress()', 5, 6),
+            ('notify_progress()', 379261435, 434286018),
             ('notify_file()', 'Folder3/File6', False),
-            ('notify_progress()', 6, 6)]
+            ('notify_progress()', 434286018, 434286018)]
 
         self.assertEqual(actual, expected)
 
@@ -669,17 +675,17 @@ class TestFingerprintControl(unittest.TestCase):
             ('notify_file_count()', 6),
             ('notify_message()', 'Found 6 files (434.3 MB)'),
             ('notify_file()', 'Folder1/File1', False),
-            ('notify_progress()', 1, 6),
+            ('notify_progress()', 234235545, 434286018),
             ('notify_file()', 'Folder1/File2', False),
-            ('notify_progress()', 2, 6),
+            ('notify_progress()', 278469799, 434286018),
             ('notify_file()', 'Folder2/File3', False),
-            ('notify_progress()', 3, 6),
+            ('notify_progress()', 358828294, 434286018),
             ('notify_file()', 'Folder2/File4', False),
-            ('notify_progress()', 4, 6),
+            ('notify_progress()', 364667852, 434286018),
             ('notify_file()', 'Folder3/File5', False),
-            ('notify_progress()', 5, 6),
+            ('notify_progress()', 379261435, 434286018),
             ('notify_file()', 'Folder3/File6', False),
-            ('notify_progress()', 6, 6),
+            ('notify_progress()', 434286018, 434286018),
             ('notify_message()', f'Unmounting VeraCrypt image at "{veracrypt_mount_point}/{backup_label}" ...')]
 
         self.assertEqual(actual, expected)
@@ -817,15 +823,15 @@ class TestFingerprintControl(unittest.TestCase):
             ('notify_message()', 'Copying files...'),
             ('notify_secondary_progress()', 0),
             ('notify_file()', 'File1', False),
-            ('notify_secondary_progress()', 0.16666666666666666),
+            ('notify_secondary_progress()', 0.539357785633338),
             ('notify_file()', 'File2', False),
-            ('notify_secondary_progress()', 0.3333333333333333),
+            ('notify_secondary_progress()', 0.6412129045333438),
             ('notify_file()', 'File3', False),
-            ('notify_secondary_progress()', 0.5),
+            ('notify_secondary_progress()', 0.8262487833536469),
             ('notify_file()', 'File4', False),
-            ('notify_secondary_progress()', 0.6666666666666666),
+            ('notify_secondary_progress()', 0.839695124607949),
             ('notify_file()', 'File5', False),
-            ('notify_secondary_progress()', 0.8333333333333334),
+            ('notify_secondary_progress()', 0.873298746173311),
             ('notify_file()', 'File6', False),
             ('notify_secondary_progress()', 1.0),
             ('notify_message()', 'Unmounting encrypted image...'),
@@ -855,17 +861,17 @@ class TestFingerprintControl(unittest.TestCase):
             ('notify_file_count()', 6),
             ('notify_message()', 'Found 6 files (434.3 MB)'),
             ('notify_file()', 'Folder1/File1', False),
-            ('notify_progress()', 1, 6),
+            ('notify_progress()', 234235545, 434286018),
             ('notify_file()', 'Folder1/File2', False),
-            ('notify_progress()', 2, 6),
+            ('notify_progress()', 278469799, 434286018),
             ('notify_file()', 'Folder2/File3', False),
-            ('notify_progress()', 3, 6),
+            ('notify_progress()', 358828294, 434286018),
             ('notify_file()', 'Folder2/File4', False),
-            ('notify_progress()', 4, 6),
+            ('notify_progress()', 364667852, 434286018),
             ('notify_file()', 'Folder3/File5', False),
-            ('notify_progress()', 5, 6),
+            ('notify_progress()', 379261435, 434286018),
             ('notify_file()', 'Folder3/File6', False),
-            ('notify_progress()', 6, 6),
+            ('notify_progress()', 434286018, 434286018),
             ('notify_message()', f'Unmounting VeraCrypt image at "{ev_mount_folder}/{backup_label}" ...'),
             ('notify_message()', f'Cleaning up working area ({work_area})...')]
         self.assertEqual(actual, expected)

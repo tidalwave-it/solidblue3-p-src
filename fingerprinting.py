@@ -601,7 +601,8 @@ class FingerprintingControl:
 
             new_timestamp = self.time_provider()
             new_timestamp_str = new_timestamp.strftime("%Y-%m-%d %H:%M:%S")
-            step = 0
+            total_progress = sum(file.size for file in files)
+            current_progress = 0
 
             for file in files:
                 path = file.path
@@ -614,9 +615,9 @@ class FingerprintingControl:
                     self.storage.add_path(file_id, path, commit=True)
                 else:
                     if only_new_files:
-                        step += 1
                         self.presentation.notify_file(path, is_new=False)
-                        self.presentation.notify_progress(step, len(files))
+                        current_progress += file.size
+                        self.presentation.notify_progress(current_progress, total_progress)
                         continue
 
                     prev_path = path_map_by_id[file_id]
@@ -638,8 +639,8 @@ class FingerprintingControl:
                     if fingerprint is not None and new_fingerprint != fingerprint:
                         self.presentation.notify_error(f'Mismatch for {path}: found {new_fingerprint} expected {fingerprint}')
 
-                step += 1
-                self.presentation.notify_progress(step, len(files))
+                current_progress += file.size
+                self.presentation.notify_progress(current_progress, total_progress)
         finally:
             stats.stop()
             total_reads = stats.plain_io_reads + stats.mmap_reads
@@ -674,26 +675,18 @@ class FingerprintingControl:
                 return
 
             files = self.__count_files([actual_mount_point])
-
-            # backup_files = [file.path for file in enumerate_files(base_path)]
-            backup_files = []
-            for file in files:
-                backup_files += [file.path]
-
             registration_date = self.time_provider()
             backup_id = self.storage.add_backup(actual_mount_point, label, volume_id, creation_date, registration_date, veracrypt_backup)
-            count = 0
 
-            for backup_file in backup_files:
-                file_id = self.__find_file_id(backup_file)
+            for current_progress, file in enumerate(files, start=1):
+                file_id = self.__find_file_id(file.path)
 
                 if file_id:
-                    backup_file = backup_file.replace(f'{actual_mount_point}/', '')
+                    backup_file = file.path.replace(f'{actual_mount_point}/', '')
                     self.storage.add_backup_item(backup_id, file_id, backup_file)
                     self.presentation.notify_file(backup_file, is_new=True)
 
-                count = count + 1
-                self.presentation.notify_progress(count, len(backup_files))
+                self.presentation.notify_progress(current_progress, len(files))
 
             self.storage.commit()
 
@@ -720,31 +713,34 @@ class FingerprintingControl:
                 self.presentation.notify_error(f'{backup.base_path} is not a registered backup')
                 return
 
-            backup_files = self.__count_files([actual_mount_point])
+            files = self.__count_files([actual_mount_point])
             check_timestamp = self.time_provider()
+            total_progress = sum(file.size for file in files)
+            current_progress = 0
 
-            for progress, backup_file in enumerate(backup_files, start=1):
-                file_relative_path = backup_file.path.replace(f'{actual_mount_point}/', '')
-                file_id = self.__find_file_id(backup_file.path)
+            for file in files:
+                file_relative_path = file.path.replace(f'{actual_mount_point}/', '')
+                file_id = self.__find_file_id(file.path)
 
                 if file_id:
                     self.presentation.notify_file(file_relative_path, is_new=False)
                     original_fingerprint, _ = self.storage.find_latest_fingerprint_by_id(file_id)
-                    algorithm, fingerprint = self.file_system.compute_fingerprint(backup_file.path)
+                    algorithm, fingerprint = self.file_system.compute_fingerprint(file.path)
                     backup_item_id = self.storage.find_backup_item_id(backup.id, file_id)
 
                     if not backup_item_id:
                         self.presentation.notify_error(f'File was not registered as part of the backup: {file_relative_path} - registering now')
                         backup_item_id = self.storage.add_backup_item(backup.id, file_id, file_relative_path)
 
-                    self.storage.add_fingerprint(backup_item_id, backup_file.name, algorithm, fingerprint, new_timestamp)
+                    self.storage.add_fingerprint(backup_item_id, file.name, algorithm, fingerprint, new_timestamp)
 
                     if algorithm == 'error':
                         self.presentation.notify_error(f'{file_relative_path}: {algorithm}')
                     elif original_fingerprint != fingerprint:
                         self.presentation.notify_error(f'Mismatch for {file_relative_path}: found {original_fingerprint} expected {fingerprint}')
 
-                self.presentation.notify_progress(progress, len(backup_files))
+                current_progress += file.size
+                self.presentation.notify_progress(current_progress, total_progress)
 
             self.storage.set_backup_check_latest_timestamp(backup.id, check_timestamp)
             self.storage.commit()
@@ -796,8 +792,10 @@ class FingerprintingControl:
 
             self.presentation.notify_message('Copying files...')
             self.presentation.notify_secondary_progress(0)
+            total_progress = sum(file.size for file in files_to_backup)
+            current_progress = 0
 
-            for sub_progress, file in enumerate(files_to_backup, start=1):
+            for file in files_to_backup:
                 parent = None
 
                 for folder in folders:
@@ -810,7 +808,8 @@ class FingerprintingControl:
                 self.file_system.make_dirs(target_folder)
                 self.presentation.notify_file(file.name, is_new=False)
                 self.file_system.copy_with_xattrs(file.path, f'{target_folder}/{file.name}', self.__execute)
-                self.presentation.notify_secondary_progress(sub_progress / len(files_to_backup))
+                current_progress += file.size
+                self.presentation.notify_secondary_progress(current_progress / total_progress)
 
             self.presentation.notify_message('Unmounting encrypted image...')
             self.file_system.unmount_veracrypt_image(veracrypt_mount_point)
