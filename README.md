@@ -54,3 +54,4 @@ Additional Resources
 * [Project Issue Tracker (Jira)](http://services.tidalwave.it/jira/browse/SLB3)
 * [Project Continuous Integration (Jenkins)](http://services.tidalwave.it/ci/view/SolidBlueIII)
 * [Project Continuous Integration (Travis)](https://travis-ci.com/bitbucket/tidalwave/solidblue3-p-src)
+* [Project Code Coverage(Codecov)](https://codecov.io/bb/tidalwave/solidblue3-p-src)
