@@ -8,5 +8,5 @@ install:
   - make PIPENV=pipenv prepare-travis clean lint
 script: make PIPENV=pipenv test
 env:
-  - PIPENV_IGNORE_VIRTUALENVS=1 CODECOV_TOKEN="c9eb675a-5376-4914-9f9d-17c197ca252d"
+  - PIPENV_IGNORE_VIRTUALENVS=1 CODECOV_TOKEN="c9eb675a-5376-4914-9f9d-17c197ca252d" SOLIBLUE_HOME="test-resources/test-home"
 after_success: python3 -m codecov

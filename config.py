@@ -24,7 +24,9 @@ class Config:
 
     @staticmethod
     def home_folder() -> str:
-        return os.getenv("HOME")
+        home_override = os.getenv("SOLIBLUE_HOME")
+        home = home_override if home_override else os.getenv("HOME")
+        return home
 
     @staticmethod
     def app_folder_path() -> str:
