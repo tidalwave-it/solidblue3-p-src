@@ -248,7 +248,7 @@ class RSync:
 
         self.log(string)
         total_bytes, _, _ = extract(r'^(Total bytes) .*$', string)
-        n1, n2, n3 = extract(r'^sent ([0-9]+) bytes  received ([0-9]+) bytes  ([0-9]+)[.0-9]* bytes\/sec$', string)
+        bytes_sent, bytes_received, speed = extract(r'^sent ([0-9]+) bytes  received ([0-9]+) bytes  ([0-9]+)[.0-9]* bytes\/sec$', string)
         t1, t2, t3 = extract(r'^(.* )([0-9]+)( bytes)$', string)
         file_list_size, _, _ = extract(r'^File list size: ([0-9]+)$', string)
         speed_up, _, _ = extract(r'^total size is [0-9]+  speedup is ([0-9]+)[.0-9]*$', string)
@@ -259,8 +259,8 @@ class RSync:
         if file_list_size:
             string = f'File list size: {format_bytes(int(file_list_size))}'
 
-        if n1 and n2 and n3:
-            string = f'sent {format_bytes(int(n1))}, received {format_bytes(int(n2))} ({format_bytes(int(n3))}/sec)'
+        if bytes_sent and bytes_received and speed:
+            string = f'sent {format_bytes(int(bytes_sent))}, received {format_bytes(int(bytes_received))} ({format_bytes(int(speed))}/sec)'
 
         if t1 and t2 and t3:
             string = f'{t1}{format_bytes(int(t2))}'
