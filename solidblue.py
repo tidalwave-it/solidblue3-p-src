@@ -159,6 +159,7 @@ class UnregisteredBackupDialog(DialogSupport):
 
     def __init__(self, main_window: QMainWindow):
         super().__init__(main_window)
+        self.mount_point = ''
         self.cb_volume_mount_point = QComboBox()
         self.cb_volume_mount_point.setEditable(False)
         self.cb_volume_mount_point.setModel(QStringListModel())
@@ -172,23 +173,21 @@ class UnregisteredBackupDialog(DialogSupport):
         layout.addWidget(self.button_box)
         self.setLayout(layout)
         self.signal_populate.connect(self.__slot_populate)
-
-        def __on_mount_point_selected(text):
-            nonlocal self
-            self.mount_point, label, _ = extract(r'(.*) \((.*)\)', text)
-            self.le_backup_name.setText(label)
-
-        self.cb_volume_mount_point.textActivated.connect(__on_mount_point_selected)
+        self.cb_volume_mount_point.textActivated.connect(self.__on_mount_point_selected)
 
     def user_options(self) -> Options:
         return UnregisteredBackupDialog.Options(base_path=self.mount_point,
                                                 label=self.le_backup_name.text(),
                                                 eject_after_scan=self.cb_eject_after_scan.isChecked())
 
-    def __slot_populate(self, items):
+    def __slot_populate(self, items: [str]):
         self.mount_point = ''
         self.le_backup_name.setText('')
         self.cb_volume_mount_point.model().setStringList([f'{item[0]} ({item[1]})' for item in items])
+
+    def __on_mount_point_selected(self, text: str):
+        self.mount_point, label, _ = extract(r'(.*) \((.*)\)', text)
+        self.le_backup_name.setText(label)
 
 
 #
