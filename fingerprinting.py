@@ -180,9 +180,9 @@ class FingerprintingStorage:
     #
     def find_backup_item_id(self, backup_id: str, file_id: str) -> str:
         t = (backup_id, file_id)
-        r = self.__query('SELECT id from backup_files WHERE backup_id = ? AND file_id = ?', t)
+        result = self.__query('SELECT id from backup_files WHERE backup_id = ? AND file_id = ?', t)
         # TODO: error if len > 1
-        return r[0][0] if len(r) == 1 else None
+        return result[0][0] if len(result) == 1 else None
 
     #
     # Returns namedtuples for all registered backups.
@@ -195,9 +195,9 @@ class FingerprintingStorage:
 
         try:
             t = ()
-            return self.__query_nt(f'SELECT id, base_path, label, volume_id, encrypted, '
-                                   f'datetime(creation_date), datetime(registration_date), datetime(latest_check_date) '
-                                   f'FROM backups ORDER BY label', t, commit=False)
+            return self.__query_nt('SELECT id, base_path, label, volume_id, encrypted, '
+                                   'datetime(creation_date), datetime(registration_date), datetime(latest_check_date) '
+                                   'FROM backups ORDER BY label', t, commit=False)
         finally:
             if need_conn:
                 self.close()
@@ -235,10 +235,11 @@ class FingerprintingStorage:
 
         if count == 0:
             return None
-        elif count == 1:
+
+        if count == 1:
             return rows[0]
-        else:
-            raise RuntimeError(f'Expected only 0 or 1 results, found {count}')
+
+        raise RuntimeError(f'Expected only 0 or 1 results, found {count}')
 
     #
     # Adds a backup file.
