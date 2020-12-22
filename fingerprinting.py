@@ -12,7 +12,6 @@
 #  __email__ = "fabrizio.giudici@tidalwave.it"
 #  __status__ = "Prototype"
 
-import datetime
 import hashlib
 import os
 import re
@@ -22,6 +21,7 @@ import subprocess
 import sys
 import time
 from collections import namedtuple
+from datetime import datetime
 from pathlib import Path
 
 import mmap
@@ -167,7 +167,7 @@ class FingerprintingStorage:
     #
     # Adds a backup. Returns the backup id.
     #
-    def add_backup(self, base_path: str, label: str, volume_id: str, creation_date: datetime.datetime, registration_date: datetime.datetime, encrypted,
+    def add_backup(self, base_path: str, label: str, volume_id: str, creation_date: datetime, registration_date: datetime, encrypted,
                    commit=False) -> str:
         backup_id = self.generate_id()
         t = (backup_id, base_path, label, volume_id, creation_date, registration_date, encrypted)
@@ -293,7 +293,7 @@ class FingerprintingStorage:
 
             for field in date_time_fields:
                 date_time_str = getattr(row, field)
-                date_time = datetime.datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S') if date_time_str else None
+                date_time = datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S') if date_time_str else None
                 row = row._replace(**{field: date_time})
 
             return row
@@ -443,8 +443,8 @@ class FingerprintingFileSystem:
     # Returns the creation date of the given file.
     #
     @staticmethod
-    def creation_date(path: str) -> datetime.datetime:
-        return datetime.datetime.fromtimestamp(os.stat(path).st_ctime)
+    def creation_date(path: str) -> datetime:
+        return datetime.fromtimestamp(os.stat(path).st_ctime)
 
     #
     #
@@ -1039,7 +1039,7 @@ class FingerprintingControl:
     #
     @staticmethod
     def __time_provider():
-        return datetime.datetime.now()
+        return datetime.now()
 
 
 #
