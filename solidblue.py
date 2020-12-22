@@ -24,7 +24,7 @@ from urllib.parse import urlparse
 from PySide2.QtCore import QStringListModel, Signal, QModelIndex, QMimeData, QObject, Qt, Slot
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, QListView, QLabel, QToolBar, QProgressBar, \
-    QTextEdit, QWidget, QAction, QToolButton, QApplication
+    QTextEdit, QWidget, QAction, QToolButton, QApplication, QFormLayout
 
 from config import Config
 from executor import Worker, Executor
@@ -119,11 +119,14 @@ class CreateBackupDialog(DialogSupport):
         self.lv_folders.viewport().setAcceptDrops(True)
         self.lv_folders.setDropIndicatorShown(True)
         layout = QVBoxLayout()
-        layout.addWidget(self.le_label)
-        layout.addWidget(self.lv_folders)
-        layout.addWidget(self.cb_algorithm)
-        layout.addWidget(self.cb_hash_algorithm)
-        layout.addWidget(self.cb_do_not_burn)
+        form_layout = QFormLayout()
+        form_layout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+        form_layout.addRow('Label:', self.le_label)
+        form_layout.addRow('Folders:', self.lv_folders)
+        form_layout.addRow('Algorithm:', self.cb_algorithm)
+        form_layout.addRow('Hash algorithm:', self.cb_hash_algorithm)
+        form_layout.addRow('', self.cb_do_not_burn)
+        layout.addLayout(form_layout)
         layout.addWidget(self.button_box)
         self.setLayout(layout)
 
@@ -131,7 +134,7 @@ class CreateBackupDialog(DialogSupport):
         self.cb_algorithm.setCurrentText(Config.veracrypt_default_algorithm())
         self.cb_hash_algorithm.model().setStringList(sorted(Config.veracrypt_hash_algorithms().keys()))
         self.cb_hash_algorithm.setCurrentText(Config.veracrypt_default_hash_algorithm())
-        self.resize(640, 480)
+        self.resize(480, 320)
         self.signal_populate.connect(self.__slot_populate)
 
     def user_options(self) -> Options:
@@ -167,9 +170,12 @@ class UnregisteredBackupDialog(DialogSupport):
         self.cb_eject_after_scan = QCheckBox()
         self.cb_eject_after_scan.setText('Eject after scan')
         layout = QVBoxLayout()
-        layout.addWidget(self.cb_volume_mount_point)
-        layout.addWidget(self.le_backup_name)
-        layout.addWidget(self.cb_eject_after_scan)
+        form_layout = QFormLayout()
+        form_layout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+        form_layout.addRow('Volume:', self.cb_volume_mount_point)
+        form_layout.addRow('Label:', self.le_backup_name)
+        form_layout.addRow('', self.cb_eject_after_scan)
+        layout.addLayout(form_layout)
         layout.addWidget(self.button_box)
         self.setLayout(layout)
         self.signal_populate.connect(self.__slot_populate)
@@ -205,8 +211,11 @@ class RegisteredBackupDialog(DialogSupport):
         self.cb_eject_after_scan = QCheckBox()
         self.cb_eject_after_scan.setText('Eject after scan')
         layout = QVBoxLayout()
-        layout.addWidget(self.cb_volume_mount_point)
-        layout.addWidget(self.cb_eject_after_scan)
+        form_layout = QFormLayout()
+        form_layout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+        form_layout.addRow('Volume:', self.cb_volume_mount_point)
+        form_layout.addRow('', self.cb_eject_after_scan)
+        layout.addLayout(form_layout)
         layout.addWidget(self.button_box)
         self.setLayout(layout)
         self.signal_populate.connect(self.__slot_populate)
@@ -335,14 +344,14 @@ class Widgets(QObject):
     # This method must be called by a background thread.
     #
     def ask_only_new_files(self) -> OnlyNewFilesDialog.Options:
-        return self.show_dialog_and_wait(self.d_only_new_files)
+        return self.show_dialog_and_wait(self.d_only_new_files, 'Scan files')
 
     #
     # Asks options for creating a new backup.
     #
     def ask_backup_options(self) -> CreateBackupDialog.Options:
         self.d_create_backup_options.signal_populate.emit()
-        return self.show_dialog_and_wait(self.d_create_backup_options)
+        return self.show_dialog_and_wait(self.d_create_backup_options, 'Create a new backup')
 
     #
     # Picks an unregistered backup volume and related options.
@@ -350,7 +359,7 @@ class Widgets(QObject):
     #
     def pick_unregistered_backup(self, values) -> UnregisteredBackupDialog.Options:
         self.d_ask_unregistered_backup.signal_populate.emit(values)
-        return self.show_dialog_and_wait(self.d_ask_unregistered_backup)
+        return self.show_dialog_and_wait(self.d_ask_unregistered_backup, 'Select an unregistered backup')
 
     #
     # Picks an registered backup volume and related options.
@@ -358,13 +367,14 @@ class Widgets(QObject):
     #
     def pick_registered_backup(self, values) -> RegisteredBackupDialog.Options:
         self.d_ask_registered_backup.signal_populate.emit(values)
-        return self.show_dialog_and_wait(self.d_ask_registered_backup)
+        return self.show_dialog_and_wait(self.d_ask_registered_backup, 'Select a registered backup')
 
     #
     # Shows a dialog and wait for the user input. If the 'OK' button is pressed, a namedtuple is asked to
     # the dialog method user_options() and returned; otherwise None is returned.
     #
-    def show_dialog_and_wait(self, dialog: QDialog) -> namedtuple:
+    def show_dialog_and_wait(self, dialog: QDialog, title: str = '') -> namedtuple:
+        dialog.setWindowTitle(title)
         self.dialog_closed = threading.Event()
         self.signal_show_dialog.emit(dialog)
         self.dialog_closed.wait()
