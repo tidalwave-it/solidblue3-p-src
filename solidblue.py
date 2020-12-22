@@ -13,6 +13,7 @@
 #  __status__ = "Prototype"
 
 import datetime
+import os
 import sys
 import threading
 import traceback
@@ -20,24 +21,26 @@ from collections import namedtuple
 from pathlib import Path
 from urllib.parse import urlparse
 
-from PySide2.QtCore import *
+from PySide2.QtCore import QStringListModel, Signal, QModelIndex, QMimeData, QObject, Qt, Slot
 from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import *
+from PySide2.QtWidgets import QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, QListView, QLabel, QToolBar, QProgressBar, \
+    QTextEdit, QWidget, QAction, QToolButton, QApplication
 
-import utilities
 from config import Config
 from executor import Worker, Executor
 from fingerprinting import FingerprintingControl, FingerprintingPresentation
 from rsync import RSync, RSyncPresentation
-from utilities import *
+from utilities import extract, notification, html_italic, shortened_path, html_red, html_bold
 
 
 #
 # Base class for all dialogs.
 #
+
+
 class DialogSupport(QDialog):
     def __init__(self, main_window: QMainWindow):
-        super(DialogSupport, self).__init__(main_window)
+        super().__init__(main_window)
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
@@ -67,7 +70,7 @@ class OnlyNewFilesDialog(DialogSupport):
 # The dialog box with the options for creating a new encrypted backup.
 #
 class CreateBackupDialog(DialogSupport):
-    Options = namedtuple('Options', 'label folders algorithm hash_algorithm burn')
+    Options = namedtuple('Options', 'label, folders, algorithm, hash_algorithm, burn')
     signal_populate = Signal()
 
     def __init__(self, main_window: QMainWindow):
@@ -172,7 +175,7 @@ class UnregisteredBackupDialog(DialogSupport):
 
         def __on_mount_point_selected(text):
             nonlocal self
-            self.mount_point, label, _ = utilities.extract(r'(.*) \((.*)\)', text)
+            self.mount_point, label, _ = extract(r'(.*) \((.*)\)', text)
             self.le_backup_name.setText(label)
 
         self.cb_volume_mount_point.textActivated.connect(__on_mount_point_selected)
@@ -211,7 +214,7 @@ class RegisteredBackupDialog(DialogSupport):
 
     def user_options(self) -> Options:
         string = self.cb_volume_mount_point.currentText()
-        volume_mount_point, label, _ = utilities.extract(r'^(.*) \(.*\)$', string)
+        volume_mount_point, label, _ = extract(r'^(.*) \(.*\)$', string)
         return RegisteredBackupDialog.Options(base_path=volume_mount_point,
                                               label=label,
                                               eject_after_scan=self.cb_eject_after_scan.isChecked())
@@ -612,7 +615,7 @@ class MainWindow(QWidget):
         options = self.widgets.ask_backup_options()
 
         if options:
-            self.__start_notification(f'Creating encrypted backup...')
+            self.__start_notification('Creating encrypted backup...')
             self.fingerprinting_control.create_encrypted_backup(folders=options.folders,
                                                                 backup_name=options.label,
                                                                 algorithm=options.algorithm,
@@ -650,7 +653,7 @@ class MainWindow(QWidget):
             return date.strftime("%Y-%m-%d %H:%M") if date else None
 
         table = '<table border=1>'
-        table += f'<tr><td>Volume</td><td>Encrypted</td><td>Created</td><td>Registered</td><td>Checked</td></tr>'
+        table += '<tr><td>Volume</td><td>Encrypted</td><td>Created</td><td>Registered</td><td>Checked</td></tr>'
 
         for backup in self.fingerprinting_control.storage.get_backups():
             encrypted = 'encrypted' if backup.encrypted else ''
