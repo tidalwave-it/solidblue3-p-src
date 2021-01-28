@@ -23,7 +23,8 @@ from urllib.parse import urlparse
 
 from PySide2.QtCore import QStringListModel, Signal, QModelIndex, QMimeData, QObject, Qt, Slot
 from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, QListView, QLabel, QToolBar, QProgressBar, \
+from PySide2.QtWidgets import QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, \
+    QListView, QLabel, QToolBar, QProgressBar, \
     QTextEdit, QWidget, QAction, QToolButton, QApplication, QFormLayout
 
 from config import Config
@@ -703,7 +704,7 @@ class MainWindow(QWidget):
 
         for step, volume in enumerate(volumes, start=1):
             self.widgets.log_bold_to_console(f'Checking volume: {volume} ...')
-            return_code = self.__execute(['sudo', 'diskutil', 'verifyVolume', volume])
+            return_code = self.__execute(['sudo', 'diskutil', 'verifyVolume', f'/Volumes/{volume}'])
 
             if return_code != 0:
                 self.widgets.log_red_to_console(f'WARNING: Exit code: {return_code}')
