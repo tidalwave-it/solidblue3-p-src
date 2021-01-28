@@ -23,8 +23,7 @@ from urllib.parse import urlparse
 
 from PySide2.QtCore import QStringListModel, Signal, QModelIndex, QMimeData, QObject, Qt, Slot
 from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, \
-    QListView, QLabel, QToolBar, QProgressBar, \
+from PySide2.QtWidgets import QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, QListView, QLabel, QToolBar, QProgressBar, \
     QTextEdit, QWidget, QAction, QToolButton, QApplication, QFormLayout
 
 from config import Config
