@@ -694,6 +694,7 @@ class MainWindow(QWidget):
                 filtered_flags = [flag.replace("@TIMESTAMP@", timestamp) for flag in (flags + item.extra_rsync_flags)]
                 target = f'{config.server}:{item.target}/' if config.server else f'{item.target}/'
                 self.__execute([rsync] + filtered_flags + [f'{item.source}/', target], self.rsync.ccc_post_processor)
+                self.__append_sync_timestamp(item.source, timestamp, item.target)
 
         self.__completion_notification(f'Files pushed to {config.server}.')
 
@@ -752,11 +753,12 @@ class MainWindow(QWidget):
     #
     # Appends a timestamped text.
     #
-    def __append_sync_timestamp(self, folder: str, text: str):
+    @staticmethod
+    def __append_sync_timestamp(folder: str, timestamp: str, text: str):
         latest_sync_file = f'{folder}/.latest-sync'
 
         with open(latest_sync_file, 'at') as file:
-            file.write(f'{self.__current_timestamp()}: {text}\n')
+            file.write(f'{timestamp}: {text}\n')
 
     #
     # Return a properly formatted timestamp.
