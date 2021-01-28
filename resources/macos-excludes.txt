@@ -1,11 +1,10 @@
-/BROKEN
-/Volumes/Users/BROKEN
 $Recycle.Bin
 .AppleDB
 .AppleDouble
 .DocumentRevisions-V100*
 .HFS+ Private Directory Data*
 .Spotlight-V100
+.TemporaryItems
 .Trash
 .Trashes
 .VolumeIcon.icns
@@ -50,5 +49,4 @@ Library/Preferences/ByHost/com.apple.loginwindow*
 Library/Saved Application State
 Library/Caches/JetBrains
 Network Trash Folder
-*.lrdata
 Library/Application Support/us.electronic.macdroid/.uploads.aft/
