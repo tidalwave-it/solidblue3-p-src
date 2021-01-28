@@ -683,6 +683,7 @@ class MainWindow(QWidget):
         flags += config.extra_rsync_flags
         flags += [f'--exclude-from={self.macos_excludes}']
         rsync = Config.resource('rsync3')
+        timestamp = self.__current_timestamp()
 
         for item_name, item in config.items.items():
             self.widgets.log_bold_to_console(f'Syncing {item_name}...')
@@ -690,8 +691,9 @@ class MainWindow(QWidget):
             if not os.path.exists(item.source):
                 self.widgets.log_red_to_console(f'Source not mounted: {item.source}')
             else:
+                filtered_flags = [flag.replace("@TIMESTAMP@", timestamp) for flag in (flags + item.extra_rsync_flags)]
                 target = f'{config.server}:{item.target}/' if config.server else f'{item.target}/'
-                self.__execute([rsync] + flags + item.extra_rsync_flags + [f'{item.source}/', target], self.rsync.ccc_post_processor)
+                self.__execute([rsync] + filtered_flags + [f'{item.source}/', target], self.rsync.ccc_post_processor)
 
         self.__completion_notification(f'Files pushed to {config.server}.')
 
@@ -761,7 +763,7 @@ class MainWindow(QWidget):
     #
     @staticmethod
     def __current_timestamp() -> str:
-        return datetime.datetime.now().strftime("%Y-%m-%d (%b %d) %H-%M-%S")
+        return datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     #
     # Logs a line.
