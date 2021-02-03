@@ -15,4 +15,5 @@ mockito = "1.2.2"
 [dev-packages]
 
 [requires]
-python_version = "3.9.1"
+# python_version = "3.9.1"
+python_version = "3.9"
