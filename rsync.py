@@ -12,7 +12,7 @@
 #  __email__ = "fabrizio.giudici@tidalwave.it"
 #  __status__ = "Prototype"
 
-from utilities import extract, format_bytes, html_red
+from utilities import extract, format_bytes, html_red, html_bold
 
 
 class RSyncPresentation:
@@ -86,7 +86,8 @@ class RSync:
                 self.log(string)
 
         ignorable, _, _ = extract(r'^('
-                                  r'DEBUG: .*|'
+                                  r'^DEBUG: .*|'
+                                  r'^INFO: .*|'
                                   r'S;;;.*|'
                                   r'make_file.*|'
                                   r'.*expand file_list .* did move|'
@@ -124,6 +125,15 @@ class RSync:
         partial_progress, _, _ = extract('^recv_files: Finished receive_data, file size at .* is ([0-9]+).*', string)
         file_name, file_size, send_scan_progress = \
             extract(r'^DEBUG: \[sender\] MKFILE: stats.total_size \|"([^"]+)"\|\+([0-9]+)\|([0-9]+)\|', string)
+
+        file_mods, file_size2, file_name2 = extract(r'^INFO: ([^ ]+) ([0-9]+) (.*)', string)
+
+        if file_mods is not None:
+            file_mods = self.__describe_mods(file_mods)
+            self.log(string)
+            self.presentation.notify_message(f'{html_bold(file_name2)} ({file_mods})')
+            self.presentation.notify_status(file_name2)
+            # return
 
         if deleting is not None:
             self.log(string)
@@ -270,6 +280,27 @@ class RSync:
 
         self.presentation.notify_message(string)
         return
+
+    #
+    #
+    #
+    def __describe_mods(self, mods : str):
+        if mods.startswith('>f+++') or mods.startswith('<f+++'):
+            return 'new'
+
+        if mods.startswith('>f') or mods.startswith('<f'):
+            return 'updated'
+
+        if mods.startswith('cd'):
+            return 'created'
+
+        if mods.startswith('*d') or mods.startswith('*f'):
+            return 'deleted (probably)'  # need to read further info from rsync output, probably is deletion
+
+        if mods.startswith('.d') or mods.startswith('.f'):
+            return 'different attributes: ' + mods[2:].replace('.', '')
+
+        return mods
 
     #
     #

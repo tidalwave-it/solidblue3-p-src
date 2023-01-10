@@ -678,7 +678,8 @@ class MainWindow(QWidget):
     def __push_files(self, config: Config.PushFiles):
         self.__start_notification(f'Pushing files to {config.server}...')
         # --ignore-errors is needed to ensure deletions complete also in case of error.
-        flags = ['--delete', '--delete-excluded', '--delete-before', '--progress', '--stats', '-rtvv', '--ignore-errors']
+        flags = ['--delete', '--delete-excluded', '--delete-before', '--progress', '--stats', '-rtvv', '--ignore-errors',
+                 '--itemize-changes', "--out-format=INFO: %i %l %n", ]
         flags += config.extra_rsync_flags
         flags += [f'--exclude-from={self.macos_excludes}']
         rsync = Config.resource('rsync3')
