@@ -103,6 +103,8 @@ class RSync:
                                   # r'recv_files: Finished receive_data.*|'
                                   r'recv_files: Calling set_file_attrs: ITEM_REPORT_XATTR.*|'
                                   r' *|'
+                                  r'S;;;TU;;;PROG;;;0;;;CF;;;.|'
+                                  r'do_filesystem_compatibility_checks.*|'
                                   r'set_file_attrs: .*)$', string)
 
         error, _, _ = extract('(^.* failed: Operation not permitted.*$|'
@@ -278,7 +280,7 @@ class RSync:
         if speed_up:
             string = f'Speedup is {speed_up}x'
 
-        self.presentation.notify_message(string)
+        # self.presentation.notify_message(string)
         return
 
     #
