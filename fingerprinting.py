@@ -621,6 +621,12 @@ class FingerprintingControl:
                         self.presentation.notify_progress(current_progress, total_progress)
                         continue
 
+                    if file_id not in path_map_by_id:
+                        self.presentation.notify_error(f'Unknown {file_id} for {path}')
+                        current_progress += file.size
+                        self.presentation.notify_progress(current_progress, total_progress)
+                        continue
+
                     prev_path = path_map_by_id[file_id]
 
                     if prev_path != path:
