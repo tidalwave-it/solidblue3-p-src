@@ -102,8 +102,13 @@ class CreateBackupDialog(DialogSupport):
                 if not self.canDropMimeData(data, action, row, column, parent):
                     return False
 
-                urls = filter(lambda url: url != '', data.text().split('\n'))
-                paths = [urlparse(url).path for url in urls]
+                text = data.text()
+
+                if '\n' not in text:
+                    text = text + '\n'
+
+                urls = list(filter(lambda url: url != '', text.split('\n')))
+                paths = list(map(lambda url: urlparse(url).path, urls))   # FIXME: it doesn't do urldecoding
                 folders = list(filter(lambda path: Path(path).is_dir(), paths))
                 self.setStringList(sorted(self.stringList() + folders))
                 backup_name_hint = FingerprintingControl.backup_name_hint(self.stringList())
