@@ -32,9 +32,13 @@ from config import Config
 from executor import Executor
 from utilities import format_bytes, generate_id, extract, veracrypt_mount_image, veracrypt_unmount_image
 
-XATTR_ID = 'it.tidalwave.datamanager.id'
-XATTR_FINGERPRINT = 'it.tidalwave.datamanager.fingerprint.md5'
-XATTR_FINGERPRINT_TIMESTAMP = 'it.tidalwave.datamanager.fingerprint.md5.timestamp'
+XATTR_ID = 'user.it.tidalwave.datamanager.id'
+XATTR_FINGERPRINT = 'user.it.tidalwave.datamanager.fingerprint.md5'
+XATTR_FINGERPRINT_TIMESTAMP = 'user.it.tidalwave.datamanager.fingerprint.md5.timestamp'
+XATTR_OLD_ID = 'it.tidalwave.datamanager.id'
+XATTR_OLD_FINGERPRINT = 'it.tidalwave.datamanager.fingerprint.md5'
+XATTR_OLD_FINGERPRINT_TIMESTAMP = 'it.tidalwave.datamanager.fingerprint.md5.timestamp'
+
 CHARSET = 'utf-8'
 MMAP_THRESHOLD = 128 * 1024 * 1024
 
@@ -362,6 +366,21 @@ class FingerprintingFileSystem:
     @staticmethod
     def set_attribute(path: str, name: str, value: str):
         xattr.setxattr(path, name, value.encode(CHARSET))
+
+    #
+    # Get a single attribute, managing the old attribute name
+    #
+    @staticmethod
+    def get_attribute2(path: str, name: str, old_name: str) -> str:
+        value = FingerprintingFileSystem.get_attribute(path, name)
+
+        if not value:
+            value = FingerprintingFileSystem.get_attribute(path, old_name)
+
+            if value:
+                FingerprintingFileSystem.set_attribute(path, name, value)
+
+        return value
 
     #
     # Get a single attribute.
@@ -1010,7 +1029,7 @@ class FingerprintingControl:
     #
     #
     def __find_file_id(self, path: str) -> str:
-        file_id = self.file_system.get_attribute(path, XATTR_ID)
+        file_id = self.file_system.get_attribute2(path, XATTR_ID, XATTR_OLD_ID)
 
         if not file_id:
             file_name = Path(path).name
@@ -1034,9 +1053,9 @@ class FingerprintingControl:
     # Gets (file_id, fingerprint, timestamp) attributes for the given path.
     #
     def __get_attributes(self, path: str) -> (str, str, int):
-        file_id = self.file_system.get_attribute(path, XATTR_ID)
-        fingerprint = self.file_system.get_attribute(path, XATTR_FINGERPRINT)
-        timestamp = self.file_system.get_attribute(path, XATTR_FINGERPRINT_TIMESTAMP)
+        file_id = self.file_system.get_attribute2(path, XATTR_ID, XATTR_OLD_ID)
+        fingerprint = self.file_system.get_attribute2(path, XATTR_FINGERPRINT, XATTR_OLD_FINGERPRINT)
+        timestamp = self.file_system.get_attribute2(path, XATTR_FINGERPRINT_TIMESTAMP, XATTR_OLD_FINGERPRINT_TIMESTAMP)
         self.debug(f'__get_attributes({path}): {file_id}, {fingerprint}, {timestamp}')
 
         return file_id, fingerprint, timestamp
