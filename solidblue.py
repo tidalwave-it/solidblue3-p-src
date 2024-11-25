@@ -698,7 +698,7 @@ class MainWindow(QWidget):
             else:
                 filtered_flags = [flag.replace("@TIMESTAMP@", timestamp) for flag in (flags + item.extra_rsync_flags)]
                 target = f'{config.server}:{item.target}/' if config.server else f'{item.target}/'
-                self.__execute([rsync] + filtered_flags + [f'{item.source}/', target], self.rsync.ccc_post_processor)
+                self.__execute([rsync] + filtered_flags + [f'{item.source}/', target], self.rsync.ccc_post_processor, retry_on_failure=True)
                 self.__append_sync_timestamp(item.source, timestamp, item.target)
 
         self.__completion_notification(f'Files pushed to {config.server}.')
@@ -724,7 +724,7 @@ class MainWindow(QWidget):
     #
     # Execs a process and returns the exit code.
     #
-    def __execute(self, args, output_processor=None, fail_on_result_code: bool = False, log_cmdline: bool = True):
+    def __execute(self, args, output_processor=None, fail_on_result_code: bool = False, retry_on_failure: bool=False, log_cmdline: bool = True):
         if output_processor is None:
             output_processor = self.__default_post_processor
 
@@ -733,7 +733,7 @@ class MainWindow(QWidget):
         else:
             self.log(' '.join(args))
 
-        return self.executor.execute(args, output_processor=output_processor, fail_on_result_code=fail_on_result_code)
+        return self.executor.execute(args, output_processor=output_processor, fail_on_result_code=fail_on_result_code, retry_on_failure=retry_on_failure)
 
     #
     # A string post-processor which just logs to the console.
