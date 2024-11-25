@@ -105,7 +105,8 @@ class RSync:
                                   r' *|'
                                   r'S;;;TU;;;PROG;;;0;;;CF;;;.|'
                                   r'do_filesystem_compatibility_checks.*|'
-                                  r'set_file_attrs: .*)$', string)
+                                  r'set_file_attrs: .*)$|'
+                                  r'.*rsync_xal_set: lremovexattr.*user.rsync.%stat.*failed: Permission denied .*', string)
 
         error, _, _ = extract('(^.* failed: Operation not permitted.*$|'
                               '^rsync: send_files failed.*$|'
