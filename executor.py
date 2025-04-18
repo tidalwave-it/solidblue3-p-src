@@ -17,7 +17,7 @@ import sys
 import time
 import traceback
 
-from PySide2.QtCore import QRunnable, Signal, QObject, Slot, QThreadPool
+from PySide6.QtCore import QRunnable, Signal, QObject, Slot, QThreadPool
 
 
 class WorkerSignals(QObject):

@@ -21,10 +21,12 @@ from collections import namedtuple
 from pathlib import Path
 from urllib.parse import urlparse
 
-from PySide2.QtCore import QStringListModel, Signal, QModelIndex, QMimeData, QObject, Qt, Slot
-from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, QListView, QLabel, QToolBar, QProgressBar, \
-    QTextEdit, QWidget, QAction, QToolButton, QApplication, QFormLayout
+from PySide6.QtCore import QStringListModel, Signal, QModelIndex, QMimeData, QObject, Qt, Slot
+from PySide6.QtGui import QIcon, QAction
+from PySide6.QtWidgets import (
+    QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, QListView, QLabel, QToolBar, QProgressBar, QTextEdit, QWidget,
+    QToolButton, QApplication, QFormLayout
+)
 
 from config import Config
 from executor import Worker, Executor
@@ -295,13 +297,13 @@ class Widgets(QObject):
         console_layout.addWidget(self.te_error_console, 30)
 
         internal_layout = QVBoxLayout()
-        internal_layout.setMargin(16)
+        internal_layout.setContentsMargins(16, 16, 16, 16)
         internal_layout.addLayout(console_layout)
         internal_layout.addWidget(self.lb_status)
         internal_layout.addWidget(self.pb_progress)
         internal_layout.addWidget(self.pb_progress_secondary)
 
-        self.layout.setMargin(0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.addWidget(self.tb_toolbar)
         self.layout.addLayout(internal_layout)
 
