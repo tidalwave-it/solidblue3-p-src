@@ -4,14 +4,16 @@
 #  SolidBlue III - Open source data manager.
 #
 #  __author__ = "Fabrizio Giudici"
-#  __copyright__ = "Copyright © 2020 by Fabrizio Giudici"
+#  __copyright__ = "Copyright © 2026 by Fabrizio Giudici"
 #  __credits__ = ["Fabrizio Giudici"]
 #  __license__ = "Apache v2"
-#  __version__ = "1.0-ALPHA-4-SNAPSHOT"
+#  __version__ = "1.0-ALPHA-1"
 #  __maintainer__ = "Fabrizio Giudici"
 #  __email__ = "fabrizio.giudici@tidalwave.it"
 #  __status__ = "Prototype"
 
+#  SolidBlue III - Open source data manager.
+#
 import hashlib
 import os
 import re
@@ -27,10 +29,9 @@ from pathlib import Path
 import mmap
 import xattr
 
-import utilities
-from config import Config
-from executor import Executor
-from utilities import format_bytes, generate_id, extract, veracrypt_mount_image, veracrypt_unmount_image
+from solidblue3.config import Config
+from solidblue3.executor import Executor
+from solidblue3.utilities import format_bytes, generate_id, extract, veracrypt_mount_image, veracrypt_unmount_image, VERACRYPT, eject_optical_disc
 
 XATTR_ID = 'user.it.tidalwave.datamanager.id'
 XATTR_FINGERPRINT = 'user.it.tidalwave.datamanager.fingerprint.md5'
@@ -442,7 +443,7 @@ class FingerprintingFileSystem:
     #
     @staticmethod
     def eject_optical_disc(mount_point: str):
-        utilities.eject_optical_disc(mount_point)
+        eject_optical_disc(mount_point)
 
     #
     # Create a directory and all its parents.
@@ -479,7 +480,7 @@ class FingerprintingFileSystem:
     #
     @staticmethod
     def create_veracrypt_image(algorithm: str, hash_algorithm: str, key_file: str, size: int, image_file: str, executor, veracrypt_post_processor):
-        executor([utilities.VERACRYPT,
+        executor([VERACRYPT,
                   '--text',
                   '--non-interactive',
                   '--create',
@@ -901,7 +902,7 @@ class FingerprintingControl:
         if max(lengths) != min(lengths):
             return None
 
-        suffixes = [utilities.extract('^.*-([0-9]+)$', name)[0] for name in names]
+        suffixes = [extract('^.*-([0-9]+)$', name)[0] for name in names]
         lengths = [len(suffix) for suffix in suffixes]
 
         if max(lengths) != min(lengths):

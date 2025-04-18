@@ -4,20 +4,22 @@
 #  SolidBlue III - Open source data manager.
 #
 #  __author__ = "Fabrizio Giudici"
-#  __copyright__ = "Copyright © 2020 by Fabrizio Giudici"
+#  __copyright__ = "Copyright © 2026 by Fabrizio Giudici"
 #  __credits__ = ["Fabrizio Giudici"]
 #  __license__ = "Apache v2"
-#  __version__ = "1.0-ALPHA-4-SNAPSHOT"
+#  __version__ = "1.0-ALPHA-1"
 #  __maintainer__ = "Fabrizio Giudici"
 #  __email__ = "fabrizio.giudici@tidalwave.it"
 #  __status__ = "Prototype"
 
+#  SolidBlue III - Open source data manager.
+#
 import subprocess
 import sys
 import time
 import traceback
 
-from PySide2.QtCore import QRunnable, Signal, QObject, Slot, QThreadPool
+from PySide6.QtCore import QRunnable, Signal, QObject, Slot, QThreadPool
 
 
 class WorkerSignals(QObject):
@@ -76,8 +78,9 @@ class Executor:
     #
     # Execs a process and returns the exit code. Output is written to log file and to the console.
     #
-    def execute(self, args, output_processor, fail_on_result_code: bool = False, retry_on_failure: bool = False, charset: str = 'utf-8'):  # 'latin-1'
-        while True:
+    def execute(self, args, output_processor, fail_on_result_code: bool = False, retry_on_failure: bool = False, max_retries: int = 2, charset: str = 'utf-8'):
+        retries = 0
+        while retries <= max_retries:
             process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
             self.process_output(process, output_processor, charset)
             self.log(f'>>>> subprocess terminated ({process.returncode})')
@@ -91,8 +94,14 @@ class Executor:
             if not retry_on_failure:
                 return process.returncode
 
+            retries += 1
+            if retries > max_retries:
+                self.log(f'MAX RETRIES ({max_retries}) REACHED, GIVING UP')
+                return process.returncode
+
             self.log(f'RESTARTING PROCESS BECAUSE OF FAILURE  ({process.returncode})') # TODO also do self.presentation.notify_message(...)
             time.sleep(1)
+        return None # never reached
 
     #
     #

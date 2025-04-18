@@ -1,28 +1,16 @@
-PIPENV="$(HOME)/.local/bin/pipenv"
+export LANG := C.UTF-8
 
-prepare:
-	python -m pip install --user pipenv
+VENV  	:= .venv
+BUILD	:= build
 
-prepare-travis:
-	python -m pip install pipenv
-	$(PIPENV) install
+.PHONY: tests
 
 clean:
-	rm -rf build __pycache__
+	@rm -rfv $(BUILD)
 
-check:
-	echo "================================ Check"
-	$(PIPENV) check
+build:
+	@mkdir -pv $(BUILD)
 
-test: check
-	echo "================================ Coverage"
-	$(PIPENV) run coverage run -m unittest
-	$(PIPENV) run coverage html -i
-
-lint: check
-	echo "================================ Pylint"
-	mkdir -p build/pylint
-	$(PIPENV) run pylint *.py | tee build/pylint/report.txt
-
-
-
+tests: build
+	mkdir -p $(BUILD)/htmlcov
+	source $(VENV)/bin/activate && pytest -v --cov=solidblue3 --cov-report=html:$(BUILD)/htmlcov tests

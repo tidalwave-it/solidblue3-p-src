@@ -4,14 +4,16 @@
 #  SolidBlue III - Open source data manager.
 #
 #  __author__ = "Fabrizio Giudici"
-#  __copyright__ = "Copyright © 2020 by Fabrizio Giudici"
+#  __copyright__ = "Copyright © 2026 by Fabrizio Giudici"
 #  __credits__ = ["Fabrizio Giudici"]
 #  __license__ = "Apache v2"
-#  __version__ = "1.0-ALPHA-4-SNAPSHOT"
+#  __version__ = "1.0-ALPHA-1"
 #  __maintainer__ = "Fabrizio Giudici"
 #  __email__ = "fabrizio.giudici@tidalwave.it"
 #  __status__ = "Prototype"
 
+#  SolidBlue III - Open source data manager.
+#
 import datetime
 import os
 import sys
@@ -21,16 +23,18 @@ from collections import namedtuple
 from pathlib import Path
 from urllib.parse import urlparse
 
-from PySide2.QtCore import QStringListModel, Signal, QModelIndex, QMimeData, QObject, Qt, Slot
-from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, QListView, QLabel, QToolBar, QProgressBar, \
-    QTextEdit, QWidget, QAction, QToolButton, QApplication, QFormLayout
+from PySide6.QtCore import QStringListModel, Signal, QModelIndex, QMimeData, QObject, Qt, Slot
+from PySide6.QtGui import QIcon, QAction
+from PySide6.QtWidgets import (
+    QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, QListView, QLabel, QToolBar, QProgressBar, QTextEdit, QWidget,
+    QToolButton, QApplication, QFormLayout, QStyle
+)
 
-from config import Config
-from executor import Worker, Executor
-from fingerprinting import FingerprintingControl, FingerprintingPresentation
-from rsync import RSync, RSyncPresentation
-from utilities import extract, notification, html_italic, shortened_path, html_red, html_bold
+from solidblue3.config import Config
+from solidblue3.executor import Worker, Executor
+from solidblue3.fingerprinting import FingerprintingControl, FingerprintingPresentation
+from solidblue3.rsync import RSync, RSyncPresentation
+from solidblue3.utilities import extract, notification, html_italic, shortened_path, html_red, html_bold
 
 
 #
@@ -295,13 +299,13 @@ class Widgets(QObject):
         console_layout.addWidget(self.te_error_console, 30)
 
         internal_layout = QVBoxLayout()
-        internal_layout.setMargin(16)
+        internal_layout.setContentsMargins(16, 16, 16, 16)
         internal_layout.addLayout(console_layout)
         internal_layout.addWidget(self.lb_status)
         internal_layout.addWidget(self.pb_progress)
         internal_layout.addWidget(self.pb_progress_secondary)
 
-        self.layout.setMargin(0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.addWidget(self.tb_toolbar)
         self.layout.addLayout(internal_layout)
 
@@ -334,7 +338,7 @@ class Widgets(QObject):
             self.__connect_action(action, function)
 
         button = QToolButton(self.tb_toolbar)
-        button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         button.setDefaultAction(action)
         self.tb_toolbar.addWidget(button)
 
@@ -587,7 +591,8 @@ class MainWindow(QWidget):
         self.widgets = Widgets(self, self.executor, self.log, self.log_exception)
 
         for scan in Config.scan_config().values():
-            self.widgets.add_button(self, scan.icon, f'Scan {scan.label}', self.__scan_files, scan)
+            icon = QIcon(Config.resource(f'icons/{scan.icon}.png'))
+            self.widgets.add_button(self, icon, f'Scan {scan.label}', self.__scan_files, scan)
 
         self.widgets.add_separator()
         self.widgets.add_button(self, 'create-backup', 'Create backup', self.__create_encrypted_backup)

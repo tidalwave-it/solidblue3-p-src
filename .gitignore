@@ -1,6 +1,6 @@
-mvn
 .DS_Store
 __pycache__/
 .coverage
-build
-out
+/build/
+*.egg-info/
+.venv
