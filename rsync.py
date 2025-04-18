@@ -120,6 +120,7 @@ class RSync:
                               '^.*Device error.*$|'
                               '^skipping non-regular file.*$|'
                               '^.*failed: Permission denied.*$|'
+                              '^.* io timeout .*$|'
                               '^File size and modification date match, but checksums were different:.*$)', string)
 
         deleting, _, _________ = extract(r'^S;;;DELETE;;;PROG;;;0;;;CF;;;(.*)$', string)
