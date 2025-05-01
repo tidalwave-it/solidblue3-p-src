@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 pyside6 = "==6.9.0"
 xattr = "==1.1.0"
-pycobertura = "==3.2.0"
 pyyaml = "==6.0.2"
 
 [dev-packages]
@@ -14,6 +13,7 @@ coverage = "==7.6.1"
 pylint = "==3.3.1"
 mockito = "==1.5.0"
 safety = "==3.2.0"
+pycobertura = "==3.2.0"
 
 [requires]
 python_version = "3.13"
