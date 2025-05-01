@@ -1,15 +1,17 @@
 export PATH := $(PATH):/root/.local/bin
 export LANG := C.UTF-8
 
-.PHONY:	prepare clean check test lint
+.PHONY:	prepare clean check test lint lock
 
 prepare:
-	# python -m pip install --user pipenv
-	pipenv install coverage pylint safety
+	python -m pip install --user pipenv
 
 prepare-travis:
 	python -m pip install pipenv
 	pipenv install
+
+lock:
+	pipenv lock
 
 clean:
 	rm -rf build __pycache__
