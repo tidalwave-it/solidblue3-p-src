@@ -1,4 +1,4 @@
-PIPENV="pipenv"
+PIPENV="/root/.local/bin/pipenv"
 
 prepare:
 	python -m pip install --user pipenv
@@ -12,7 +12,7 @@ clean:
 
 check:
 	echo "================================ Check"
-	-$(PIPENV) check
+	-$(PIPENV) scan
 
 test: check
 	echo "================================ Coverage"
@@ -23,6 +23,3 @@ lint: check
 	echo "================================ Pylint"
 	mkdir -p build/pylint
 	$(PIPENV) run pylint *.py | tee build/pylint/report.txt
-
-
-
