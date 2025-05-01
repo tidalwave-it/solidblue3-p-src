@@ -13,7 +13,7 @@ clean:
 
 check:
 	echo "================================ Check"
-	-$(PIPENV) scan
+	-$(PIPENV) check
 
 test: check
 	echo "================================ Coverage"
