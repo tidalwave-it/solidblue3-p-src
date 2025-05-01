@@ -3,6 +3,7 @@ PIPENV="/root/.local/bin/pipenv"
 prepare:
 	python -m pip install --user pipenv
 	python -m pip install --user coverage
+	python -m pip install --user pylint
 
 prepare-travis:
 	python -m pip install pipenv
