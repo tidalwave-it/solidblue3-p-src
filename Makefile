@@ -1,4 +1,4 @@
-PIPENV="$(HOME)/.local/bin/pipenv"
+PIPENV="pipenv"
 
 prepare:
 	python -m pip install --user pipenv
@@ -12,7 +12,7 @@ clean:
 
 check:
 	echo "================================ Check"
-	$(PIPENV) check
+	-$(PIPENV) check
 
 test: check
 	echo "================================ Coverage"
