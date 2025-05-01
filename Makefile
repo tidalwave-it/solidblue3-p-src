@@ -1,9 +1,11 @@
 export PATH := $(PATH):/root/.local/bin
+export LANG := C.UTF-8
+
+.PHONY:	prepare clean check test lint
 
 prepare:
-	python -m pip install --user pipenv
-	python -m pip install --user coverage
-	python -m pip install --user pylint
+	# python -m pip install --user pipenv
+	pipenv install coverage pylint safety
 
 prepare-travis:
 	python -m pip install pipenv
