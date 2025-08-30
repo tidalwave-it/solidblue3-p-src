@@ -76,8 +76,9 @@ class Executor:
     #
     # Execs a process and returns the exit code. Output is written to log file and to the console.
     #
-    def execute(self, args, output_processor, fail_on_result_code: bool = False, retry_on_failure: bool = False, charset: str = 'utf-8'):  # 'latin-1'
-        while True:
+    def execute(self, args, output_processor, fail_on_result_code: bool = False, retry_on_failure: bool = False, max_retries: int = 2, charset: str = 'utf-8'):
+        retries = 0
+        while retries <= max_retries:
             process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
             self.process_output(process, output_processor, charset)
             self.log(f'>>>> subprocess terminated ({process.returncode})')
@@ -91,8 +92,14 @@ class Executor:
             if not retry_on_failure:
                 return process.returncode
 
+            retries += 1
+            if retries > max_retries:
+                self.log(f'MAX RETRIES ({max_retries}) REACHED, GIVING UP')
+                return process.returncode
+
             self.log(f'RESTARTING PROCESS BECAUSE OF FAILURE  ({process.returncode})') # TODO also do self.presentation.notify_message(...)
             time.sleep(1)
+        return None # never reached
 
     #
     #
