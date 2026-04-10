@@ -5,3 +5,4 @@ __pycache__/
 build
 out
 .venv
+/src/solidblue3.egg-info/
