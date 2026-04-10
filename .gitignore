@@ -1,8 +1,6 @@
-mvn
 .DS_Store
 __pycache__/
 .coverage
-build
-out
+/build/
+*.egg-info/
 .venv
-/src/solidblue3.egg-info/
