@@ -1,6 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -e
 
 BASE=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
-source "$BASE/.venv/bin/activate"
-exec python -m "solidblue3.solidblue" "$@"
+source "$BASE/.venv/bin/activate" && exec python -m "solidblue3.solidblue" "$@"

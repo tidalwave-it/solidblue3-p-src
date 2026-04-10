@@ -4,14 +4,16 @@
 #  SolidBlue III - Open source data manager.
 #
 #  __author__ = "Fabrizio Giudici"
-#  __copyright__ = "Copyright © 2020 by Fabrizio Giudici"
+#  __copyright__ = "Copyright © 2026 by Fabrizio Giudici"
 #  __credits__ = ["Fabrizio Giudici"]
 #  __license__ = "Apache v2"
-#  __version__ = "1.0-ALPHA-4-SNAPSHOT"
+#  __version__ = "1.0-ALPHA-1"
 #  __maintainer__ = "Fabrizio Giudici"
 #  __email__ = "fabrizio.giudici@tidalwave.it"
 #  __status__ = "Prototype"
 
+#  SolidBlue III - Open source data manager.
+#
 import os
 import re
 import subprocess
