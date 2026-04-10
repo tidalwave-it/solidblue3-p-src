@@ -18,7 +18,7 @@ import unittest
 from datetime import datetime
 from os import mkdir
 
-from fingerprinting import FingerprintingStorage
+from solidblue3.fingerprinting import FingerprintingStorage
 
 
 class TestFingerprintStorage(unittest.TestCase):

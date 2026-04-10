@@ -4,14 +4,16 @@
 #  SolidBlue III - Open source data manager.
 #
 #  __author__ = "Fabrizio Giudici"
-#  __copyright__ = "Copyright © 2020 by Fabrizio Giudici"
+#  __copyright__ = "Copyright © 2026 by Fabrizio Giudici"
 #  __credits__ = ["Fabrizio Giudici"]
 #  __license__ = "Apache v2"
-#  __version__ = "1.0-ALPHA-4-SNAPSHOT"
+#  __version__ = "1.0-ALPHA-1"
 #  __maintainer__ = "Fabrizio Giudici"
 #  __email__ = "fabrizio.giudici@tidalwave.it"
 #  __status__ = "Prototype"
 
+#  SolidBlue III - Open source data manager.
+#
 import datetime
 import os
 import sys
@@ -28,11 +30,11 @@ from PySide6.QtWidgets import (
     QToolButton, QApplication, QFormLayout
 )
 
-from config import Config
-from executor import Worker, Executor
-from fingerprinting import FingerprintingControl, FingerprintingPresentation
-from rsync import RSync, RSyncPresentation
-from utilities import extract, notification, html_italic, shortened_path, html_red, html_bold
+from solidblue3.config import Config
+from solidblue3.executor import Worker, Executor
+from solidblue3.fingerprinting import FingerprintingControl, FingerprintingPresentation
+from solidblue3.rsync import RSync, RSyncPresentation
+from solidblue3.utilities import extract, notification, html_italic, shortened_path, html_red, html_bold
 
 
 #

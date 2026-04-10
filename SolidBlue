@@ -1,0 +1,6 @@
+#!/bin/bash
+set -euo pipefail
+
+BASE=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+source "$BASE/.venv/bin/activate"
+exec python -m "solidblue3.solidblue" "$@"

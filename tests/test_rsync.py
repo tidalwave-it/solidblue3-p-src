@@ -14,7 +14,7 @@
 
 import unittest
 
-from rsync import RSync
+from solidblue3.rsync import RSync
 
 
 #

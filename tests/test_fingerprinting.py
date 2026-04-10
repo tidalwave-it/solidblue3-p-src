@@ -19,9 +19,9 @@ from pathlib import Path
 
 from mockito import when, unstub
 
-from config import Config
-from executor import Executor
-from fingerprinting import FingerprintingControl, FingerprintingPresentation, FingerprintingStats, FingerprintingFileSystem
+from solidblue3.config import Config
+from solidblue3.executor import Executor
+from solidblue3.fingerprinting import FingerprintingControl, FingerprintingPresentation, FingerprintingStats, FingerprintingFileSystem
 
 
 #

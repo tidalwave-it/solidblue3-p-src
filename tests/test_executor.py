@@ -15,7 +15,7 @@ import os
 import unittest
 from pathlib import Path
 
-from executor import Executor
+from solidblue3.executor import Executor
 
 
 class TestExecutor(unittest.TestCase):

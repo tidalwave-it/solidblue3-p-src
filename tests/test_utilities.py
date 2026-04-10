@@ -16,8 +16,8 @@
 
 import unittest
 
-import utilities
-from fingerprinting import FingerprintingControl
+from solidblue3 import utilities
+from solidblue3.fingerprinting import FingerprintingControl
 
 
 class TestUtilities(unittest.TestCase):
