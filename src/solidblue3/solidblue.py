@@ -349,6 +349,26 @@ class Widgets(QObject):
         self.tb_toolbar.addSeparator()
 
     #
+    # Add a toolbar button with a dropdown menu.
+    # items is a list of (text, callable) pairs.
+    #
+    def add_menu_button(self, parent: QWidget, icon_name: str, label: str, items: list):
+        menu = QMenu(parent)
+
+        for item_text, item_function in items:
+            action = QAction(item_text, parent)
+            self.__connect_action(action, item_function)
+            menu.addAction(action)
+
+        button = QToolButton(self.tb_toolbar)
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        button.setIcon(QIcon(Config.resource(f'icons/{icon_name}.png')))
+        button.setText(label)
+        button.setMenu(menu)
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.tb_toolbar.addWidget(button)
+
+    #
     # Asks whether only new files should be scanned.
     # This method must be called by a background thread.
     #
