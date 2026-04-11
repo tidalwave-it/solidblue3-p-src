@@ -70,16 +70,14 @@ def feed(rsync_instance, text, is_ccc=True):
 # ============================================================
 # Final stats parsing
 #
-# In real rsync/CCC output the human-readable stat lines appear BEFORE the
-# "total: matches=..." trigger line. Lines before the trigger are processed
-# by the normal (non-final-stats) branch, which emits notify_message for
-# unrecognised lines. Lines after the trigger go through __process_final_stats
-# which only handles specific patterns (byte counts, speedup, etc.).
+# In CCC rsync output the "total: matches=..." trigger line comes first,
+# setting final_stats=True. All subsequent lines are processed by
+# __process_final_stats, which reformats byte counts, speedup, etc.
 # ============================================================
 
 class TestFinalStats:
-    # The informational lines come first, then the trigger, then the debug line.
     FINAL_STATS_INPUT = """\
+total: matches=295822  hash_hits=32390938  false_alarms=732 data=794606220
 Number of files: 64456
 Number of extended attributes: 0
 Size of transferred xattrs: 0 bytes
@@ -95,15 +93,8 @@ Total bytes sent: 540789287
 Total bytes received: 2733421
 sent 540789287 bytes  received 2733421 bytes  1559606.05 bytes/sec
 total size is 23145325944  speedup is 42.58
-total: matches=295822  hash_hits=32390938  false_alarms=732 data=794606220
 DEBUG: exit_cleanup[sender]: cleanup_child_pid: 68637. Error code: 0 at main.c:1444
 """
-
-    def test_informational_lines_emitted(self, rsync, presentation):
-        feed(rsync, self.FINAL_STATS_INPUT)
-
-        assert ('notify_message', 'Number of files: 64456') in presentation.calls
-        assert ('notify_message', 'Number of files transferred: 14257') in presentation.calls
 
     def test_byte_counts_formatted(self, rsync, presentation):
         feed(rsync, self.FINAL_STATS_INPUT)
