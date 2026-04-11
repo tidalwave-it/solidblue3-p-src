@@ -27,7 +27,7 @@ from PySide6.QtCore import QStringListModel, Signal, QModelIndex, QMimeData, QOb
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, QListView, QLabel, QToolBar, QProgressBar, QTextEdit, QWidget,
-    QToolButton, QApplication, QFormLayout, QStyle
+    QToolButton, QApplication, QFormLayout, QMenu
 )
 
 from solidblue3.config import Config
@@ -349,6 +349,26 @@ class Widgets(QObject):
         self.tb_toolbar.addSeparator()
 
     #
+    # Add a toolbar button with a dropdown menu.
+    # items is a list of (text, callable) pairs.
+    #
+    def add_menu_button(self, parent: QWidget, icon_name: str, label: str, items: list):
+        menu = QMenu(parent)
+
+        for item_text, item_function in items:
+            action = QAction(item_text, parent)
+            self.__connect_action(action, item_function)
+            menu.addAction(action)
+
+        button = QToolButton(self.tb_toolbar)
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        button.setIcon(QIcon(Config.resource(f'icons/{icon_name}.png')))
+        button.setText(label)
+        button.setMenu(menu)
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.tb_toolbar.addWidget(button)
+
+    #
     # Asks whether only new files should be scanned.
     # This method must be called by a background thread.
     #
@@ -590,22 +610,25 @@ class MainWindow(QWidget):
         self.executor = Executor(self.log, self.log_exception)
         self.widgets = Widgets(self, self.executor, self.log, self.log_exception)
 
-        for scan in Config.scan_config().values():
-            icon = QIcon(Config.resource(f'icons/{scan.icon}.png'))
-            self.widgets.add_button(self, icon, f'Scan {scan.label}', self.__scan_files, scan)
+        self.widgets.add_menu_button(self, 'scan', 'Scan', [
+            (f'Scan {scan.label}', lambda s=scan: self.__scan_files(s))
+            for scan in Config.scan_config().values()
+        ])
 
-        self.widgets.add_separator()
-        self.widgets.add_button(self, 'create-backup', 'Create backup', self.__create_encrypted_backup)
-        self.widgets.add_button(self, 'register-backup', 'Register backup', self.__register_backup)
-        self.widgets.add_button(self, 'check-backup', 'Check backup', self.__check_backup)
-        self.widgets.add_button(self, 'show-backups', 'Show backups', self.__show_backups)
-        self.widgets.add_separator()
+        self.widgets.add_menu_button(self, 'create-backup', 'Backup', [
+            ('Create backup',   self.__create_encrypted_backup),
+            ('Register backup', self.__register_backup),
+            ('Check backup',    self.__check_backup),
+            ('Show backups',    self.__show_backups),
+        ])
 
-        for pmf in Config.push_files_config().values():
-            self.widgets.add_button(self, pmf.icon, pmf.label, self.__push_files, pmf)
+        self.widgets.add_menu_button(self, 'push-files', 'Push files', [
+            (pmf.label, lambda p=pmf: self.__push_files(p))
+            for pmf in Config.push_files_config().values()
+        ])
 
-        self.widgets.add_separator()
         self.widgets.add_button(self, 'check-all-volumes', 'Check volumes', self.__check_all_volumes)
+
         self.setLayout(self.widgets.layout)
 
         self.rsync = RSync(presentation=RsyncPresentationAdapter(self.widgets), log=self.log)
