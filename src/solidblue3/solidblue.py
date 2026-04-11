@@ -27,7 +27,7 @@ from PySide6.QtCore import QStringListModel, Signal, QModelIndex, QMimeData, QOb
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, QListView, QLabel, QToolBar, QProgressBar, QTextEdit, QWidget,
-    QToolButton, QApplication, QFormLayout
+    QToolButton, QApplication, QFormLayout, QStyle
 )
 
 from solidblue3.config import Config
@@ -338,7 +338,7 @@ class Widgets(QObject):
             self.__connect_action(action, function)
 
         button = QToolButton(self.tb_toolbar)
-        button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         button.setDefaultAction(action)
         self.tb_toolbar.addWidget(button)
 
@@ -591,7 +591,8 @@ class MainWindow(QWidget):
         self.widgets = Widgets(self, self.executor, self.log, self.log_exception)
 
         for scan in Config.scan_config().values():
-            self.widgets.add_button(self, scan.icon, f'Scan {scan.label}', self.__scan_files, scan)
+            icon = QIcon(Config.resource(f'icons/{scan.icon}.png'))
+            self.widgets.add_button(self, icon, f'Scan {scan.label}', self.__scan_files, scan)
 
         self.widgets.add_separator()
         self.widgets.add_button(self, 'create-backup', 'Create backup', self.__create_encrypted_backup)
