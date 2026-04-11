@@ -590,22 +590,25 @@ class MainWindow(QWidget):
         self.executor = Executor(self.log, self.log_exception)
         self.widgets = Widgets(self, self.executor, self.log, self.log_exception)
 
-        for scan in Config.scan_config().values():
-            icon = QIcon(Config.resource(f'icons/{scan.icon}.png'))
-            self.widgets.add_button(self, icon, f'Scan {scan.label}', self.__scan_files, scan)
+        self.widgets.add_menu_button(self, 'scan', 'Scan', [
+            (f'Scan {scan.label}', lambda s=scan: self.__scan_files(s))
+            for scan in Config.scan_config().values()
+        ])
 
-        self.widgets.add_separator()
-        self.widgets.add_button(self, 'create-backup', 'Create backup', self.__create_encrypted_backup)
-        self.widgets.add_button(self, 'register-backup', 'Register backup', self.__register_backup)
-        self.widgets.add_button(self, 'check-backup', 'Check backup', self.__check_backup)
-        self.widgets.add_button(self, 'show-backups', 'Show backups', self.__show_backups)
-        self.widgets.add_separator()
+        self.widgets.add_menu_button(self, 'create-backup', 'Backup', [
+            ('Create backup',   self.__create_encrypted_backup),
+            ('Register backup', self.__register_backup),
+            ('Check backup',    self.__check_backup),
+            ('Show backups',    self.__show_backups),
+        ])
 
-        for pmf in Config.push_files_config().values():
-            self.widgets.add_button(self, pmf.icon, pmf.label, self.__push_files, pmf)
+        self.widgets.add_menu_button(self, 'push-files', 'Push files', [
+            (pmf.label, lambda p=pmf: self.__push_files(p))
+            for pmf in Config.push_files_config().values()
+        ])
 
-        self.widgets.add_separator()
         self.widgets.add_button(self, 'check-all-volumes', 'Check volumes', self.__check_all_volumes)
+
         self.setLayout(self.widgets.layout)
 
         self.rsync = RSync(presentation=RsyncPresentationAdapter(self.widgets), log=self.log)
