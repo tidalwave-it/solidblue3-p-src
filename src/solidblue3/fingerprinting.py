@@ -31,7 +31,7 @@ import xattr
 
 from solidblue3.config import Config
 from solidblue3.executor import Executor
-from solidblue3.utilities import format_bytes, generate_id, extract, veracrypt_mount_image, veracrypt_unmount_image
+from solidblue3.utilities import format_bytes, generate_id, extract, veracrypt_mount_image, veracrypt_unmount_image, VERACRYPT, eject_optical_disc
 
 XATTR_ID = 'user.it.tidalwave.datamanager.id'
 XATTR_FINGERPRINT = 'user.it.tidalwave.datamanager.fingerprint.md5'
@@ -443,7 +443,7 @@ class FingerprintingFileSystem:
     #
     @staticmethod
     def eject_optical_disc(mount_point: str):
-        utilities.eject_optical_disc(mount_point)
+        eject_optical_disc(mount_point)
 
     #
     # Create a directory and all its parents.
@@ -480,7 +480,7 @@ class FingerprintingFileSystem:
     #
     @staticmethod
     def create_veracrypt_image(algorithm: str, hash_algorithm: str, key_file: str, size: int, image_file: str, executor, veracrypt_post_processor):
-        executor([utilities.VERACRYPT,
+        executor([VERACRYPT,
                   '--text',
                   '--non-interactive',
                   '--create',
