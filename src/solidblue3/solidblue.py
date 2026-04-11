@@ -27,7 +27,7 @@ from PySide6.QtCore import QStringListModel, Signal, QModelIndex, QMimeData, QOb
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QMainWindow, QCheckBox, QVBoxLayout, QComboBox, QLineEdit, QListView, QLabel, QToolBar, QProgressBar, QTextEdit, QWidget,
-    QToolButton, QApplication, QFormLayout, QStyle
+    QToolButton, QApplication, QFormLayout, QMenu
 )
 
 from solidblue3.config import Config
