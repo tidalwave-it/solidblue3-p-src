@@ -902,7 +902,7 @@ class FingerprintingControl:
         if max(lengths) != min(lengths):
             return None
 
-        suffixes = [utilities.extract('^.*-([0-9]+)$', name)[0] for name in names]
+        suffixes = [extract('^.*-([0-9]+)$', name)[0] for name in names]
         lengths = [len(suffix) for suffix in suffixes]
 
         if max(lengths) != min(lengths):
