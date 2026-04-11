@@ -284,7 +284,7 @@ class RSync:
         if speed_up:
             string = f'Speedup is {speed_up}x'
 
-        # self.presentation.notify_message(string)
+        self.presentation.notify_message(string)
         return
 
     #
